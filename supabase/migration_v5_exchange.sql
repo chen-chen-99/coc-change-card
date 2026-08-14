@@ -123,7 +123,7 @@ begin
     raise exception '卡牌不属于当前活动';
   end if;
   if v_card_a.category <> v_card_b.category then
-    raise exception format('不同种类的卡牌不能交换（%s 与 %s）', v_card_a.name, v_card_b.name);
+    raise exception '不同种类的卡牌不能交换（% 与 %）', v_card_a.name, v_card_b.name;
   end if;
 
   -- 双方扣减（带余量校验：保留 keep_base 张后仍 > 0）
@@ -134,7 +134,7 @@ begin
      and pc.player_id = v_a and pc.card_id = v_ca
      and pc.quantity - p.keep_base > 0;
   if not found then
-    raise exception format('你已没有多余的「%s」可交换', v_card_a.name);
+    raise exception '你已没有多余的「%」可交换', v_card_a.name;
   end if;
 
   update public.player_cards pc
@@ -144,7 +144,7 @@ begin
      and pc.player_id = v_b and pc.card_id = v_cb
      and pc.quantity - p.keep_base > 0;
   if not found then
-    raise exception format('对方已没有多余的「%s」可交换', v_card_b.name);
+    raise exception '对方已没有多余的「%」可交换', v_card_b.name;
   end if;
 
   -- 双方入账
