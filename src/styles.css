@@ -300,6 +300,21 @@ body {
 .rec-badge.oneWay { background: rgba(90,169,255,0.15); color: var(--blue); border: 1px solid var(--blue); }
 
 .rec-meta { margin-top: 8px; font-size: 11px; color: var(--text-dim); }
+.rec-swap { margin-top: 10px; text-align: right; }
+.btn-swap {
+  background: var(--green);
+  border-color: var(--green);
+  color: #0b1f14;
+  font-weight: 700;
+}
+.btn-swap:hover:not(:disabled) { filter: brightness(1.1); }
+.btn-swap-disabled {
+  background: var(--bg-soft);
+  border-color: var(--border);
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
 
 /* ---------- 婕旂ず妯″紡鎻愮ず ---------- */
 .banner.demo { border-color: var(--blue); color: #cfe6ff; background: rgba(90,169,255,0.08); }

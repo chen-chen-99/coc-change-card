@@ -107,6 +107,22 @@ export async function getClanTradingData(clanId, cardIds) {
 
   return { players: list, inventory: inventory || [] };
 }
+/**
+ * 一键交换：双方在游戏中交换后，任一方点击按钮即可原子同步双方数据
+ * @returns {{ status: 'ok'|'already_done', updated?: Array<{player_id, card_id, quantity}> }}
+ */
+export async function executeExchange({ activityId, playerA, playerB, cardFromA, cardFromB }) {
+  if (isDemoMode) return demoApi.executeExchange({ activityId, playerA, playerB, cardFromA, cardFromB });
+  const { data, error } = await supabase.rpc('execute_exchange', {
+    p_activity_id: activityId,
+    p_player_a: playerA,
+    p_player_b: playerB,
+    p_card_from_a: cardFromA,
+    p_card_from_b: cardFromB,
+  });
+  if (error) throw new Error(`交换失败：${error.message}`);
+  return data;
+}
 /** 设置/修改/清除访问码（RPC：无访问码可任意设置；已设置则仅主人可改） */
 export async function setAccessCode(playerId, newCode) {
   if (isDemoMode) return demoApi.setAccessCode(playerId, newCode);

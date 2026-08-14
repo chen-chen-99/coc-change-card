@@ -134,6 +134,8 @@ function ensurePlayer(gameName, playerTag) {
   return p;
 }
 
+/** 演示模式下已完成的交换（模拟数据库唯一约束，防重复） */
+const completedSwaps = new Set();
 export const demoApi = {
   async signInAnonymously() {
     return { id: DEMO_USER_ID };
@@ -171,6 +173,36 @@ export const demoApi = {
     if (row) row.quantity = quantity;
     else state.inventory.push({ player_id: playerId, card_id: cardId, quantity });
     return quantity;
+  },
+
+  async executeExchange({ activityId, playerA, playerB, cardFromA, cardFromB }) {
+    const [pa, pb] = [playerA, playerB].sort();
+    const [ca, cb] = pa === playerA ? [cardFromA, cardFromB] : [cardFromB, cardFromA];
+    const key = `${activityId}|${pa}|${pb}|${ca}|${cb}`;
+    if (completedSwaps.has(key)) return { status: 'already_done', updated: [] };
+
+    const qa = state.inventory.find((r) => r.player_id === pa && r.card_id === ca)?.quantity ?? 0;
+    const qb = state.inventory.find((r) => r.player_id === pb && r.card_id === cb)?.quantity ?? 0;
+    const keepA = state.players.find((p) => p.player_id === pa)?.keep_base ?? 1;
+    const keepB = state.players.find((p) => p.player_id === pb)?.keep_base ?? 1;
+    if (qa - keepA <= 0) throw new Error('你已没有多余的卡可交换');
+    if (qb - keepB <= 0) throw new Error('对方已没有多余的卡可交换');
+
+    const setQ = (pid, cid, delta) => {
+      const row = state.inventory.find((r) => r.player_id === pid && r.card_id === cid);
+      if (row) row.quantity = Math.max(0, row.quantity + delta);
+      else state.inventory.push({ player_id: pid, card_id: cid, quantity: Math.max(0, delta) });
+    };
+    setQ(pa, ca, -1);
+    setQ(pb, cb, -1);
+    setQ(pa, cb, 1);
+    setQ(pb, ca, 1);
+    completedSwaps.add(key);
+
+    const updated = state.inventory
+      .filter((r) => (r.player_id === pa || r.player_id === pb) && (r.card_id === ca || r.card_id === cb))
+      .map((r) => ({ player_id: r.player_id, card_id: r.card_id, quantity: r.quantity }));
+    return { status: 'ok', updated };
   },
 
   async getClanTradingData(clanId, cardIds) {

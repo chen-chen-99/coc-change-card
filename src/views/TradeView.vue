@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { session } from '../lib/store.js';
-import { getClanTradingData } from '../lib/api.js';
+import { getClanTradingData, executeExchange } from '../lib/api.js';
 import { buildRecommendations, groupByNeededCard } from '../lib/matching.js';
 import { categoryLabel } from '../lib/categories.js';
 
@@ -10,12 +10,20 @@ const cardThumbSrc = (card) => base + (card.image_url || '').replace(/^\//, '');
 
 const loading = ref(false);
 const error = ref('');
+const notice = ref('');
+const busyKey = ref('');
 const groups = ref([]);
 const myMissingCount = ref(0);
 const mySpareCount = ref(0);
 const otherMemberCount = ref(0);
 
 const cardIds = () => session.cards.map((c) => c.card_id);
+
+/** 每个推荐条目的唯一标识，用于按钮忙碌态 */
+const swapKeyOf = (rec) =>
+  rec.type === 'twoWay'
+    ? `${rec.partner.playerId}:${rec.iGive.card_id}:${rec.iGet.card_id}`
+    : `oneway:${rec.partner.playerId}:${rec.iGet.card_id}`;
 
 async function load() {
   loading.value = true;
@@ -47,6 +55,51 @@ async function load() {
   }
 }
 
+/**
+ * 一键交换：双方在游戏中完成交换后，任一方点击即原子同步双方数据。
+ * 服务端校验余量/同种类/防重复；返回后刷新推荐。
+ */
+async function onSwap(rec) {
+  if (rec.type !== 'twoWay') return;
+  if (!session.activity) {
+    error.value = '暂无活动数据，无法交换';
+    return;
+  }
+  const ok = window.confirm(
+    `确认已在游戏中完成这组交换？\n\n` +
+      `你 → ${rec.partner.gameName}：${rec.iGive.name}\n` +
+      `${rec.partner.gameName} → 你：${rec.iGet.name}\n\n` +
+      `点击后将自动同步双方卡牌数据。`
+  );
+  if (!ok) return;
+
+  busyKey.value = swapKeyOf(rec);
+  notice.value = '';
+  error.value = '';
+  try {
+    const res = await executeExchange({
+      activityId: session.activity.activity_id,
+      playerA: session.player.player_id,
+      playerB: rec.partner.playerId,
+      cardFromA: rec.iGive.card_id,
+      cardFromB: rec.iGet.card_id,
+    });
+    if (res.status === 'already_done') {
+      notice.value = '该交换已完成（可能对方已同步），已为你刷新最新数据。';
+    } else {
+      for (const row of res.updated || []) {
+        if (row.player_id === session.player.player_id) session.inventory[row.card_id] = row.quantity;
+      }
+      notice.value = `✅ 交换已同步：你给出 ${rec.iGive.name}，获得 ${rec.iGet.name}。`;
+    }
+    await load();
+  } catch (e) {
+    error.value = e.message;
+  } finally {
+    busyKey.value = '';
+  }
+}
+
 onMounted(load);
 </script>
 
@@ -58,6 +111,8 @@ onMounted(load);
     </div>
 
     <div class="banner rule-hint">📌 规则：只有<b>同种类</b>的卡牌才能互相交换（圣水 / 暗黑重油 / 建筑大师基地 / 超级兵种）。</div>
+
+    <div v-if="notice" class="banner success">{{ notice }}</div>
 
     <div class="stats-row">
       <div class="stat"><span class="stat-num">{{ myMissingCount }}</span> 张缺少</div>
@@ -109,6 +164,22 @@ onMounted(load);
             <template v-if="rec.type === 'twoWay'">★★★★★ 双向交换</template>
             <template v-else>单向 · 对方有你缺的卡</template>
           </div>
+
+          <div class="rec-swap">
+            <button
+              v-if="rec.type === 'twoWay'"
+              class="btn btn-swap"
+              :disabled="busyKey === swapKeyOf(rec)"
+              @click="onSwap(rec)"
+            >{{ busyKey === swapKeyOf(rec) ? '同步中…' : '✅ 交换完成，同步数据' }}</button>
+            <button
+              v-else
+              class="btn btn-swap btn-swap-disabled"
+              disabled
+              title="单向推荐没有约定换出卡，需双方约定后从双向推荐一键同步"
+            >单向无法一键同步</button>
+          </div>
+
           <div v-if="rec.partner.lastUpdatedAt" class="rec-meta">
             数据更新：{{ new Date(rec.partner.lastUpdatedAt).toLocaleString('zh-CN') }}
           </div>
