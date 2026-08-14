@@ -4,9 +4,8 @@
 
 ## 当前状态
 
-- 目录内现有 **60 张占位图**（AI 生成的兵种插画，右下角带「AI生成 WORKBUDDY」水印），用于开发调试。
-- **计划替换为官方兵种立绘**：从 Clash of Clans Fandom Wiki 获取对应兵种的透明 PNG，按下方命名规则同名覆盖即可，无需改代码。替换完成后本段应更新。
-- 图片处理步骤与 60 张卡牌的 Wiki 页面对照见 `docs/card-image-prompt.md`。
+- 目录内为 **60 张官方兵种立绘**（来源：Clash of Clans Fandom Wiki，透明背景 PNG，512×512），按 4 个种类分组。
+- 获取 / 处理步骤与 60 张卡牌的 Wiki 页面对照见 `docs/card-image-prompt.md`。
 
 ## 命名规则（重要）
 
