@@ -16,8 +16,8 @@ const groups = ref([]);
 const myMissingCount = ref(0);
 const mySpareCount = ref(0);
 const otherMemberCount = ref(0);
-/** 匹配范围：'clan' 仅同部落 | 'channel' 同渠道（区服） */
-const scope = ref('clan');
+/** 匹配范围：'clan' 仅同部落 | 'channel' 同渠道（区服）；默认同渠道（同部落人数较少） */
+const scope = ref('channel');
 /** 单向交换中，我选择给出的多余卡（key -> card_id） */
 const selectedGive = ref({});
 

@@ -139,6 +139,59 @@ export async function executeExchange({ activityId, playerA, playerB, cardFromA,
   if (error) throw new Error(`交换失败：${error.message}`);
   return data;
 }
+/** 我的换卡记录（涉及我的历史交换，含对方/卡牌信息），按时间倒序 */
+export async function getMyExchangeRecords(playerId, cardIds) {
+  if (isDemoMode) return demoApi.getMyExchangeRecords(playerId, cardIds);
+  const { data: exchanges, error: err1 } = await supabase
+    .from('exchanges')
+    .select('*')
+    .or(`player_a.eq.${playerId},player_b.eq.${playerId}`)
+    .order('created_at', { ascending: false });
+  if (err1) throw new Error(`读取换卡记录失败：${err1.message}`);
+  if (!exchanges || exchanges.length === 0) return [];
+
+  const playerIds = [...new Set(exchanges.flatMap((e) => [e.player_a, e.player_b]))];
+  const cardIdsSet = [...new Set(exchanges.flatMap((e) => [e.card_from_a, e.card_from_b]))];
+
+  const { data: players, error: err2 } = await supabase
+    .from('players')
+    .select('player_id, game_name, player_tag, clan_id, clans(name)')
+    .in('player_id', playerIds);
+  if (err2) throw new Error(`读取玩家信息失败：${err2.message}`);
+
+  const { data: cards, error: err3 } = await supabase
+    .from('cards')
+    .select('card_id, name')
+    .in('card_id', cardIdsSet);
+  if (err3) throw new Error(`读取卡牌信息失败：${err3.message}`);
+
+  const playerById = new Map((players || []).map((p) => [p.player_id, p]));
+  const cardById = new Map((cards || []).map((c) => [c.card_id, c]));
+
+  return (exchanges || []).map((e) => {
+    const isA = e.player_a === playerId;
+    const partner = playerById.get(isA ? e.player_b : e.player_a);
+    const iGaveId = isA ? e.card_from_a : e.card_from_b;
+    const iGotId = isA ? e.card_from_b : e.card_from_a;
+    return {
+      exchange_id: e.exchange_id,
+      created_at: e.created_at,
+      partnerName: partner?.game_name ?? '未知玩家',
+      partnerTag: partner?.player_tag ?? null,
+      partnerClan: partner?.clans?.name ?? null,
+      iGaveName: cardById.get(iGaveId)?.name ?? iGaveId,
+      iGotName: cardById.get(iGotId)?.name ?? iGotId,
+    };
+  });
+}
+
+/** 撤销一笔交换（RPC：仅交换双方之一可撤销；校验库存足以归还） */
+export async function undoExchange(exchangeId) {
+  if (isDemoMode) return demoApi.undoExchange(exchangeId);
+  const { data, error } = await supabase.rpc('undo_exchange', { p_exchange_id: exchangeId });
+  if (error) throw new Error(`撤销失败：${error.message}`);
+  return data;
+}
 /** 设置/修改/清除访问码（RPC：无访问码可任意设置；已设置则仅主人可改） */
 export async function setAccessCode(playerId, newCode) {
   if (isDemoMode) return demoApi.setAccessCode(playerId, newCode);

@@ -358,6 +358,22 @@ body {
   color: var(--text-dim);
   font-weight: 400;
 }
+.rec-record-foot {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.btn-undo {
+  background: rgba(239, 106, 106, 0.12);
+  border-color: var(--red);
+  color: #ffb3b3;
+  font-weight: 600;
+}
+.btn-undo:hover:not(:disabled) { background: rgba(239, 106, 106, 0.22); }
+
 
 
 /* ---------- 婕旂ず妯″紡鎻愮ず ---------- */

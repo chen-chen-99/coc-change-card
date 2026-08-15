@@ -108,6 +108,7 @@ const state = {
   inventory: Object.entries(MEMBER_META).flatMap(([key]) =>
     buildMemberInventory(`demo-${key}`, PATTERNS[key])
   ),
+  exchanges: [],
 };
 
 function ensurePlayer(gameName, playerTag, channel = 'wechat') {
@@ -138,6 +139,15 @@ function ensurePlayer(gameName, playerTag, channel = 'wechat') {
 
 /** 演示模式下已完成的交换（模拟数据库唯一约束，防重复） */
 const completedSwaps = new Set();
+let exchangeSeq = 0;
+
+/** 库存增减（模拟数据库 upsert） */
+function setQuantity(pid, cid, delta) {
+  const row = state.inventory.find((r) => r.player_id === pid && r.card_id === cid);
+  if (row) row.quantity = Math.max(0, row.quantity + delta);
+  else state.inventory.push({ player_id: pid, card_id: cid, quantity: Math.max(0, delta) });
+}
+
 export const demoApi = {
   async signInAnonymously() {
     return { id: DEMO_USER_ID };
@@ -190,19 +200,75 @@ export const demoApi = {
     if (qa - keepA <= 0) throw new Error('你已没有多余的卡可交换');
     if (qb - keepB <= 0) throw new Error('对方已没有多余的卡可交换');
 
-    const setQ = (pid, cid, delta) => {
-      const row = state.inventory.find((r) => r.player_id === pid && r.card_id === cid);
-      if (row) row.quantity = Math.max(0, row.quantity + delta);
-      else state.inventory.push({ player_id: pid, card_id: cid, quantity: Math.max(0, delta) });
-    };
-    setQ(pa, ca, -1);
-    setQ(pb, cb, -1);
-    setQ(pa, cb, 1);
-    setQ(pb, ca, 1);
+    setQuantity(pa, ca, -1);
+    setQuantity(pb, cb, -1);
+    setQuantity(pa, cb, 1);
+    setQuantity(pb, ca, 1);
     completedSwaps.add(key);
+    state.exchanges.push({
+      exchange_id: `ex-${Date.now()}-${(exchangeSeq += 1)}`,
+      activity_id: activityId,
+      player_a: pa,
+      player_b: pb,
+      card_from_a: ca,
+      card_from_b: cb,
+      created_at: nowIso(),
+    });
 
     const updated = state.inventory
       .filter((r) => (r.player_id === pa || r.player_id === pb) && (r.card_id === ca || r.card_id === cb))
+      .map((r) => ({ player_id: r.player_id, card_id: r.card_id, quantity: r.quantity }));
+    return { status: 'ok', updated };
+  },
+
+  async getMyExchangeRecords(playerId) {
+    return state.exchanges
+      .filter((e) => e.player_a === playerId || e.player_b === playerId)
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .map((e) => {
+        const isA = e.player_a === playerId;
+        const partnerId = isA ? e.player_b : e.player_a;
+        const partner = state.players.find((p) => p.player_id === partnerId);
+        const iGaveId = isA ? e.card_from_a : e.card_from_b;
+        const iGotId = isA ? e.card_from_b : e.card_from_a;
+        const cardName = (id) => CARDS.find((c) => c.card_id === id)?.name ?? id;
+        return {
+          exchange_id: e.exchange_id,
+          created_at: e.created_at,
+          partnerName: partner?.game_name ?? '未知玩家',
+          partnerTag: partner?.player_tag ?? null,
+          partnerClan: partner?.clan_name ?? CLAN_NAME,
+          iGaveName: cardName(iGaveId),
+          iGotName: cardName(iGotId),
+        };
+      });
+  },
+
+  async undoExchange(exchangeId) {
+    const idx = state.exchanges.findIndex((e) => e.exchange_id === exchangeId);
+    if (idx === -1) throw new Error('交换记录不存在');
+    const e = state.exchanges[idx];
+
+    const qA = state.inventory.find((r) => r.player_id === e.player_a && r.card_id === e.card_from_b)?.quantity ?? 0;
+    const qB = state.inventory.find((r) => r.player_id === e.player_b && r.card_id === e.card_from_a)?.quantity ?? 0;
+    if (qA <= 0 || qB <= 0) throw new Error('撤销失败：该交换的卡已被用于其他交换，无法撤销');
+
+    setQuantity(e.player_a, e.card_from_b, -1);
+    setQuantity(e.player_a, e.card_from_a, 1);
+    setQuantity(e.player_b, e.card_from_a, -1);
+    setQuantity(e.player_b, e.card_from_b, 1);
+    state.exchanges.splice(idx, 1);
+
+    const [pa, pb] = [e.player_a, e.player_b].sort();
+    const [ca, cb] = pa === e.player_a ? [e.card_from_a, e.card_from_b] : [e.card_from_b, e.card_from_a];
+    completedSwaps.delete(`${e.activity_id}|${pa}|${pb}|${ca}|${cb}`);
+
+    const updated = state.inventory
+      .filter(
+        (r) =>
+          (r.player_id === e.player_a || r.player_id === e.player_b) &&
+          (r.card_id === e.card_from_a || r.card_id === e.card_from_b)
+      )
       .map((r) => ({ player_id: r.player_id, card_id: r.card_id, quantity: r.quantity }));
     return { status: 'ok', updated };
   },
