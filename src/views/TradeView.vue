@@ -16,6 +16,8 @@ const groups = ref([]);
 const myMissingCount = ref(0);
 const mySpareCount = ref(0);
 const otherMemberCount = ref(0);
+/** 匹配范围：'clan' 仅同部落 | 'all' 所有部落 */
+const scope = ref('clan');
 
 const cardIds = () => session.cards.map((c) => c.card_id);
 
@@ -29,7 +31,11 @@ async function load() {
   loading.value = true;
   error.value = '';
   try {
-    const { players, inventory } = await getClanTradingData(session.player.clan_id, cardIds());
+    const { players, inventory } = await getClanTradingData(
+      session.player.clan_id,
+      cardIds(),
+      scope.value
+    );
     const me = players.find((p) => p.player_id === session.player.player_id);
     if (!me) throw new Error('未找到当前玩家数据');
 
@@ -53,6 +59,13 @@ async function load() {
   } finally {
     loading.value = false;
   }
+}
+
+function setScope(s) {
+  if (scope.value === s) return;
+  scope.value = s;
+  notice.value = '';
+  load();
 }
 
 /**
@@ -110,6 +123,21 @@ onMounted(load);
       <button class="btn" :disabled="loading" @click="load">刷新</button>
     </div>
 
+    <div class="scope-row">
+      <span class="scope-label">匹配范围</span>
+      <div class="scope-seg">
+        <button
+          :class="['scope-btn', { active: scope === 'clan' }]"
+          @click="setScope('clan')"
+        >🏠 仅同部落</button>
+        <button
+          :class="['scope-btn', { active: scope === 'all' }]"
+          @click="setScope('all')"
+        >🌍 所有部落</button>
+      </div>
+      <span v-if="scope === 'all'" class="scope-hint">已显示其他部落成员的部落名</span>
+    </div>
+
     <div class="banner rule-hint">📌 规则：只有<b>同种类</b>的卡牌才能互相交换（圣水 / 暗黑重油 / 建筑大师基地 / 超级兵种）。</div>
 
     <div v-if="notice" class="banner success">{{ notice }}</div>
@@ -117,7 +145,10 @@ onMounted(load);
     <div class="stats-row">
       <div class="stat"><span class="stat-num">{{ myMissingCount }}</span> 张缺少</div>
       <div class="stat"><span class="stat-num">{{ mySpareCount }}</span> 张可提供</div>
-      <div class="stat"><span class="stat-num">{{ otherMemberCount }}</span> 位成员</div>
+      <div class="stat">
+        <span class="stat-num">{{ otherMemberCount }}</span>
+        {{ scope === 'all' ? '位可匹配玩家' : '位成员' }}
+      </div>
     </div>
 
     <div v-if="loading" class="banner">正在计算匹配…</div>
@@ -127,7 +158,7 @@ onMounted(load);
       <div v-if="myMissingCount === 0" class="banner success">🎉 你已经集齐全部卡牌，无需换卡！</div>
 
       <div v-else-if="groups.length === 0" class="banner">
-        暂无可匹配的换卡对象。等待更多部落成员录入卡牌数据后刷新查看。
+        暂无可匹配的换卡对象。等待更多玩家录入卡牌数据后刷新查看。
       </div>
 
       <div v-for="g in groups" :key="g.card.card_id" class="rec-group">
@@ -145,6 +176,7 @@ onMounted(load);
 
         <div v-for="(rec, idx) in g.items" :key="idx" class="rec-item" :class="rec.type">
           <div class="rec-partner">
+            <span v-if="scope === 'all' && rec.partner.clanName" class="partner-clan">{{ rec.partner.clanName }}</span>
             <span class="partner-name">{{ rec.partner.gameName }}</span>
             <span v-if="rec.partner.playerTag" class="partner-tag">{{ rec.partner.playerTag }}</span>
             <span class="partner-spare">拥有：{{ g.card.name }} × {{ rec.partner.spareQuantity }}</span>

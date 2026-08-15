@@ -490,9 +490,6 @@ begin
   if v_row_a.player_id is null or v_row_b.player_id is null then
     raise exception '玩家不存在';
   end if;
-  if v_row_a.clan_id <> v_row_b.clan_id then
-    raise exception '只能与同部落成员交换';
-  end if;
 
   if not exists (
     select 1 from public.players p

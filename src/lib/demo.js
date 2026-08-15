@@ -205,13 +205,15 @@ export const demoApi = {
     return { status: 'ok', updated };
   },
 
-  async getClanTradingData(clanId, cardIds) {
+  async getClanTradingData(clanId, cardIds, scope = 'clan') {
     const players = state.players.map((p) => ({
       player_id: p.player_id,
       game_name: p.game_name,
       player_tag: p.player_tag,
       keep_base: p.keep_base,
       last_updated_at: p.last_updated_at,
+      clan_id: p.clan_id,
+      clan_name: p.clan_name ?? CLAN_NAME,
     }));
     const inventory = state.inventory.filter((r) => cardIds.includes(r.card_id));
     return { players, inventory };

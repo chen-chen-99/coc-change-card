@@ -84,16 +84,28 @@ export async function updateQuantity(playerId, cardId, quantity) {
   return data?.[0]?.quantity;
 }
 
-/** 同部落全部玩家 + 本活动库存（用于换卡匹配） */
-export async function getClanTradingData(clanId, cardIds) {
-  if (isDemoMode) return demoApi.getClanTradingData(clanId, cardIds);
-  const { data: players, error: err1 } = await supabase
+/**
+ * 玩家 + 本活动库存（用于换卡匹配）
+ * @param {string} scope 'clan' 仅同部落 | 'all' 所有部落
+ */
+export async function getClanTradingData(clanId, cardIds, scope = 'clan') {
+  if (isDemoMode) return demoApi.getClanTradingData(clanId, cardIds, scope);
+  let query = supabase
     .from('players')
-    .select('player_id, game_name, player_tag, keep_base, last_updated_at')
-    .eq('clan_id', clanId);
-  if (err1) throw new Error(`读取部落成员失败：${err1.message}`);
+    .select('player_id, game_name, player_tag, keep_base, last_updated_at, clan_id, clans(name)');
+  if (scope === 'clan') query = query.eq('clan_id', clanId);
+  const { data: players, error: err1 } = await query;
+  if (err1) throw new Error(`读取玩家数据失败：${err1.message}`);
 
-  const list = players || [];
+  const list = (players || []).map((p) => ({
+    player_id: p.player_id,
+    game_name: p.game_name,
+    player_tag: p.player_tag,
+    keep_base: p.keep_base,
+    last_updated_at: p.last_updated_at,
+    clan_id: p.clan_id,
+    clan_name: p.clans?.name ?? null,
+  }));
   if (!cardIds.length || list.length === 0) {
     return { players: list, inventory: [] };
   }
