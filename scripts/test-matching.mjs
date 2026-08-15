@@ -176,5 +176,40 @@ const players = (defs) =>
   assert(pairs.every((p) => p.split('<-')[0].split(':')[0] === p.split('<-')[1].split(':')[0]), '每条双向推荐双方卡牌种类一致');
 }
 
+// =====================================================================
+// 用例 8：单向交换 —— 对方不需要我的卡，但可用同种类多余卡交换
+// =====================================================================
+{
+  console.log('\n用例 8：单向交换（对方不需要我的卡，用同种类多余卡换）');
+  const cards8 = [
+    { card_id: 'c01', name: '卡牌1', category: 'elixir' },
+    { card_id: 'c02', name: '卡牌2', category: 'elixir' },
+    { card_id: 'c03', name: '卡牌3', category: 'elixir' },
+  ];
+  const me8 = players([['A', '玩家A', 1]])[0];
+  const clanMembers8 = [me8, ...players([['B', '小明', 1]])];
+
+  // A 缺 c02；有 c01 多余；B 有 c02 多余但什么都不缺 → 单向，可给 c01
+  const rows8 = inventory([
+    ['A', 'c01', 3], ['A', 'c02', 0], ['A', 'c03', 1],
+    ['B', 'c01', 1], ['B', 'c02', 2], ['B', 'c03', 1],
+  ]);
+  const recs8 = buildRecommendations({ me: me8, clanMembers: clanMembers8, cards: cards8, inventory: rows8 });
+  assert(recs8.length === 1, `应生成 1 条单向推荐，实际 ${recs8.length}`);
+  assert(recs8[0].type === 'oneWay', '应为单向 oneWay');
+  assert(
+    recs8[0].mySpareOptions?.length === 1,
+    `可给出的同种类多余卡选项应为 1，实际 ${recs8[0].mySpareOptions?.length}`
+  );
+  assert(recs8[0].mySpareOptions?.[0]?.card_id === 'c01', '可给出的多余卡应为卡牌1（同种类）');
+
+  // A 没有同种类多余卡 → 不生成单向推荐
+  const rows8b = inventory([
+    ['A', 'c01', 1], ['A', 'c02', 0], ['A', 'c03', 1],
+    ['B', 'c01', 1], ['B', 'c02', 2], ['B', 'c03', 1],
+  ]);
+  const recs8b = buildRecommendations({ me: me8, clanMembers: clanMembers8, cards: cards8, inventory: rows8b });
+  assert(recs8b.length === 0, `无同种类多余卡时不应推荐，实际 ${recs8b.length}`);
+}
 console.log(`\n结果：${passed} 通过，${failed} 失败`);
 if (failed > 0) process.exit(1);

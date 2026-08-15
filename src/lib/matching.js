@@ -60,6 +60,15 @@ export function buildRecommendations({ me, clanMembers = [], cards = [], invento
     const needCard = cardById.get(needId);
     if (!needCard) continue;
 
+    // 我可用来「单方交换」的选项：与 needId 同种类、且我有多余的卡
+    const mySpareOptions = cards
+      .filter((c) => c.category === needCard.category && mySpareSet.has(c.card_id))
+      .map((c) => ({
+        card_id: c.card_id,
+        name: c.name,
+        spare: quantityOf(me.player_id, c.card_id) - keepOf(me),
+      }));
+
     const providers = others.filter((m) => hasSpare(m, needId));
 
     for (const m of providers) {
@@ -87,12 +96,14 @@ export function buildRecommendations({ me, clanMembers = [], cards = [], invento
             resolvedCount: 2,                             // 双向一次解决 2 个需求
           });
         }
-      } else {
+      } else if (mySpareOptions.length > 0) {
+        // 单向：对方不需要我的卡，但我可用任意「同种类」多余卡交换
         result.push({
           type: 'oneWay',
           cardINeed: needCard,
           iGet: needCard,
           iGive: null,
+          mySpareOptions,
           partner: {
             playerId: m.player_id,
             gameName: m.game_name,

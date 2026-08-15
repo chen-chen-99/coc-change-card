@@ -18,11 +18,16 @@ const mySpareCount = ref(0);
 const otherMemberCount = ref(0);
 /** 匹配范围：'clan' 仅同部落 | 'all' 所有部落 */
 const scope = ref('clan');
+/** 单向交换中，我选择给出的多余卡（key -> card_id） */
+const selectedGive = ref({});
 
 const cardIds = () => session.cards.map((c) => c.card_id);
 
-/** 每个推荐条目的唯一标识，用于按钮忙碌态 */
-const swapKeyOf = (rec) => `${rec.partner.playerId}:${rec.iGive.card_id}:${rec.iGet.card_id}`;
+/** 每个推荐条目的唯一标识，用于按钮忙碌态 / 选择记忆 */
+const swapKeyOf = (rec) =>
+  rec.type === 'twoWay'
+    ? `${rec.partner.playerId}:${rec.iGive.card_id}:${rec.iGet.card_id}`
+    : `oneway:${rec.partner.playerId}:${rec.iGet.card_id}`;
 
 async function load() {
   loading.value = true;
@@ -37,8 +42,19 @@ async function load() {
     if (!me) throw new Error('未找到当前玩家数据');
 
     const recs = buildRecommendations({ me, clanMembers: players, cards: session.cards, inventory });
-    // 只展示可交换（双向互补）的推荐，不展示单向结果
-    groups.value = groupByNeededCard(recs.filter((r) => r.type === 'twoWay'));
+    groups.value = groupByNeededCard(recs);
+
+    // 单向交换默认选第一张多余卡
+    for (const g of groups.value) {
+      for (const rec of g.items) {
+        if (rec.type === 'oneWay') {
+          const key = swapKeyOf(rec);
+          if (!selectedGive.value[key] && rec.mySpareOptions?.length) {
+            selectedGive.value[key] = rec.mySpareOptions[0].card_id;
+          }
+        }
+      }
+    }
 
     const myRows = inventory.filter((r) => r.player_id === me.player_id);
     const keep = me.keep_base ?? 1;
@@ -68,16 +84,28 @@ function setScope(s) {
 
 /**
  * 一键交换：双方在游戏中完成交换后，任一方点击即原子同步双方数据。
- * 服务端校验余量/同种类/防重复；返回后刷新推荐。
+ * 双向：按推荐给出的卡；单向：按用户下拉选择的同种类多余卡。
  */
 async function onSwap(rec) {
   if (!session.activity) {
     error.value = '暂无活动数据，无法交换';
     return;
   }
+
+  let giveCardId = rec.iGive?.card_id;
+  if (rec.type === 'oneWay') {
+    giveCardId = selectedGive.value[swapKeyOf(rec)];
+    if (!giveCardId) {
+      error.value = '请先选择你要给出的多余卡';
+      return;
+    }
+  }
+  const giveName =
+    rec.type === 'twoWay' ? rec.iGive.name : session.cards.find((c) => c.card_id === giveCardId)?.name ?? '';
+
   const ok = window.confirm(
     `确认已在游戏中完成这组交换？\n\n` +
-      `你 → ${rec.partner.gameName}：${rec.iGive.name}\n` +
+      `你 → ${rec.partner.gameName}：${giveName}\n` +
       `${rec.partner.gameName} → 你：${rec.iGet.name}\n\n` +
       `点击后将自动同步双方卡牌数据。`
   );
@@ -91,7 +119,7 @@ async function onSwap(rec) {
       activityId: session.activity.activity_id,
       playerA: session.player.player_id,
       playerB: rec.partner.playerId,
-      cardFromA: rec.iGive.card_id,
+      cardFromA: giveCardId,
       cardFromB: rec.iGet.card_id,
     });
     if (res.status === 'already_done') {
@@ -100,7 +128,7 @@ async function onSwap(rec) {
       for (const row of res.updated || []) {
         if (row.player_id === session.player.player_id) session.inventory[row.card_id] = row.quantity;
       }
-      notice.value = `✅ 交换已同步：你给出 ${rec.iGive.name}，获得 ${rec.iGet.name}。`;
+      notice.value = `✅ 交换已同步：你给出 ${giveName}，获得 ${rec.iGet.name}。`;
     }
     await load();
   } catch (e) {
@@ -135,7 +163,9 @@ onMounted(load);
       <span v-if="scope === 'all'" class="scope-hint">已显示其他部落成员的部落名</span>
     </div>
 
-    <div class="banner rule-hint">📌 仅展示<b>可交换</b>（双向互补）的推荐；只有<b>同种类</b>的卡牌才能互相交换（圣水 / 暗黑重油 / 建筑大师基地 / 超级兵种）。</div>
+    <div class="banner rule-hint">
+      📌 只推荐<b>可交换</b>的组合：<b>双向互补</b>（你给 X、对方给你 Y）或 <b>单方交换</b>（对方有你缺的卡，你任选一张<b>同种类</b>多余卡交换）。只有<b>同种类</b>的卡牌才能互相交换。
+    </div>
 
     <div v-if="notice" class="banner success">{{ notice }}</div>
 
@@ -171,7 +201,7 @@ onMounted(load);
           <span class="rec-group-count">{{ g.items.length }} 个匹配</span>
         </div>
 
-        <div v-for="(rec, idx) in g.items" :key="idx" class="rec-item twoWay">
+        <div v-for="(rec, idx) in g.items" :key="idx" class="rec-item" :class="rec.type">
           <div class="rec-partner">
             <span v-if="scope === 'all' && rec.partner.clanName" class="partner-clan">{{ rec.partner.clanName }}</span>
             <span class="partner-name">{{ rec.partner.gameName }}</span>
@@ -179,12 +209,29 @@ onMounted(load);
             <span class="partner-spare">拥有：{{ g.card.name }} × {{ rec.partner.spareQuantity }}</span>
           </div>
 
-          <div class="rec-flow">
-            <div class="flow-line">你 → {{ rec.partner.gameName }}：{{ rec.iGive.name }}</div>
-            <div class="flow-line">{{ rec.partner.gameName }} → 你：{{ rec.iGet.name }}</div>
-          </div>
+          <template v-if="rec.type === 'twoWay'">
+            <div class="rec-flow">
+              <div class="flow-line">你 → {{ rec.partner.gameName }}：{{ rec.iGive.name }}</div>
+              <div class="flow-line">{{ rec.partner.gameName }} → 你：{{ rec.iGet.name }}</div>
+            </div>
+            <div class="rec-badge twoWay">★★★★★ 双向交换</div>
+          </template>
 
-          <div class="rec-badge twoWay">★★★★★ 双向交换</div>
+          <template v-else>
+            <div class="rec-flow">
+              <div class="flow-line">{{ rec.partner.gameName }} → 你：{{ rec.iGet.name }}</div>
+            </div>
+            <div class="rec-badge oneWay">🔁 单方交换</div>
+            <div class="rec-hint">💡 对方暂不需要你的卡，任选一张你多余的<b>同种类</b>卡即可交换</div>
+            <div class="rec-give-pick">
+              <span class="give-pick-label">你给（任选一张同种类多余卡）：</span>
+              <select v-model="selectedGive[swapKeyOf(rec)]" class="give-pick-select">
+                <option v-for="opt in rec.mySpareOptions" :key="opt.card_id" :value="opt.card_id">
+                  {{ opt.name }} × {{ opt.spare }}
+                </option>
+              </select>
+            </div>
+          </template>
 
           <div class="rec-swap">
             <button
