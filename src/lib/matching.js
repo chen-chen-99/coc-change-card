@@ -136,8 +136,8 @@ export function buildRecommendations({ me, clanMembers = [], cards = [], invento
  * 背景：游戏可用「两张多余卡」兑换任意卡，因此玩家可能想凑齐某张卡到 targetCount 张。
  * 逻辑：
  *   - 匹配所有「有多余 targetCard」的成员；
- *   - 优先「双向」：对方恰好缺我能给的（同种类）卡，其次「单方」：我任选一张同种类多余卡交换；
- *   - 排序：双向优先 → 解决需求多优先 → 对方余量多优先 → 数据新优先。
+ *   - 仅保留「双向」：对方恰好缺我能给的（同种类）卡（游戏发起换卡需至少一方缺卡，纯单方无法发起）；
+ *   - 排序：解决需求多优先 → 对方余量多优先 → 数据新优先。
  * @returns {{ need: number, recs: Array<{type, iGet, iGive, mySpareOptions, preferredGive, partner, resolvedCount}> }}
  */
 export function buildCollectRecommendations({ me, clanMembers = [], cards = [], inventory = [], targetCard, targetCount = 3 }) {
@@ -175,13 +175,15 @@ export function buildCollectRecommendations({ me, clanMembers = [], cards = [], 
       (c) => c.category === targetCard.category && quantityOf(p.player_id, c.card_id) === 0
     );
     const mutual = pMissing.filter((c) => hasSpare(me, c.card_id));
+    // 纯单方（对方不缺我有的卡）无法在游戏内发起换卡请求，直接屏蔽
+    if (mutual.length === 0) continue;
 
     recs.push({
-      type: mutual.length > 0 ? 'twoWay' : 'oneWay',
+      type: 'twoWay',
       iGet: targetCard,                                  // 我获得（凑卡目标）
       iGive: null,                                       // 我给对方的卡（前端选择）
       mySpareOptions,
-      preferredGive: mutual.length > 0 ? mutual[0].card_id : null, // 双向时优先给「对方缺的卡」
+      preferredGive: mutual[0].card_id,                  // 优先给「对方缺的卡」
       partner: {
         playerId: p.player_id,
         gameName: p.game_name,
@@ -190,7 +192,7 @@ export function buildCollectRecommendations({ me, clanMembers = [], cards = [], 
         spareQuantity: quantityOf(p.player_id, targetCard.card_id) - keepOf(p),
         lastUpdatedAt: p.last_updated_at,
       },
-      resolvedCount: mutual.length > 0 ? 2 : 1,
+      resolvedCount: 2,
     });
   }
 

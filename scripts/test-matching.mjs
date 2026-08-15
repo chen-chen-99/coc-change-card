@@ -239,10 +239,11 @@ const players = (defs) =>
   });
 
   assert(res9.need === 2, `还差 2 张，实际 ${res9.need}`);
-  assert(res9.recs.length === 2, `应生成 2 条凑卡推荐，实际 ${res9.recs.length}`);
-  assert(res9.recs[0].type === 'twoWay' && res9.recs[0].partner.gameName === '小明', '第 1 条应为与小明双向');
+  assert(res9.recs.length === 1, `只保留双向（单方被屏蔽），实际 ${res9.recs.length}`);
+  assert(res9.recs[0].type === 'twoWay' && res9.recs[0].partner.gameName === '小明', '应为与小明双向');
   assert(res9.recs[0].preferredGive === 'c02', `双向优先给卡牌2，实际 ${res9.recs[0].preferredGive}`);
-  assert(res9.recs[1].type === 'oneWay' && res9.recs[1].partner.gameName === '小红', '第 2 条应为与小红单向');
+  assert(res9.recs.every((r) => r.type === 'twoWay'), '凑卡兑换只保留双向组合');
+  assert(!res9.recs.some((r) => r.partner.gameName === '小红'), '小红什么都不缺（单方）→ 被屏蔽');
 
   // 已凑够 3 张 → 不需要再换
   const rows9b = inventory([

@@ -222,7 +222,8 @@ async function onSwap(rec) {
       <div v-if="need <= 0" class="banner success">🎉 已达目标张数，无需再换！</div>
       <div v-else-if="recs.length === 0" class="banner">
         <template v-if="targetCard && !recs.length && need > 0">
-          暂无可匹配的对象，或你暂时没有与「{{ targetCard.name }}」<b>同种类</b>的多余卡（交换必须同种类）。先去「我的卡牌」积累同种类多余卡，或等更多人录入数据后刷新。
+          暂无可匹配的对象：游戏发起换卡需<b>至少一方缺卡</b>，因此需要对方<b>缺少你有的同种类卡</b>才能换。
+          可先去「我的卡牌」积累同种类多余卡，或等更多人录入数据后刷新。
         </template>
       </div>
 
@@ -239,10 +240,7 @@ async function onSwap(rec) {
           <div class="flow-line">{{ rec.partner.gameName }} → 你：{{ rec.iGet.name }}</div>
         </div>
 
-        <div class="rec-badge" :class="rec.type">
-          <template v-if="rec.type === 'twoWay'">★★★★★ 双向优先（对方缺你能给的卡）</template>
-          <template v-else>🔁 单方 · 对方不需要你的卡</template>
-        </div>
+        <div class="rec-badge twoWay">★★★★★ 双向优先（对方缺你能给的卡）</div>
 
         <div class="rec-give-pick">
           <span class="give-pick-label">你给（任选一张同种类多余卡）：</span>
