@@ -16,7 +16,7 @@ const groups = ref([]);
 const myMissingCount = ref(0);
 const mySpareCount = ref(0);
 const otherMemberCount = ref(0);
-/** 匹配范围：'clan' 仅同部落 | 'all' 所有部落 */
+/** 匹配范围：'clan' 仅同部落 | 'channel' 同渠道（区服） */
 const scope = ref('clan');
 /** 单向交换中，我选择给出的多余卡（key -> card_id） */
 const selectedGive = ref({});
@@ -36,7 +36,8 @@ async function load() {
     const { players, inventory } = await getClanTradingData(
       session.player.clan_id,
       cardIds(),
-      scope.value
+      scope.value,
+      session.player.channel ?? 'wechat'
     );
     const me = players.find((p) => p.player_id === session.player.player_id);
     if (!me) throw new Error('未找到当前玩家数据');
@@ -156,15 +157,15 @@ onMounted(load);
           @click="setScope('clan')"
         >🏠 仅同部落</button>
         <button
-          :class="['scope-btn', { active: scope === 'all' }]"
-          @click="setScope('all')"
-        >🌍 所有部落</button>
+          :class="['scope-btn', { active: scope === 'channel' }]"
+          @click="setScope('channel')"
+        >🔗 同渠道</button>
       </div>
-      <span v-if="scope === 'all'" class="scope-hint">已显示其他部落成员的部落名</span>
+      <span v-if="scope === 'channel'" class="scope-hint">同渠道（区服）内可跨部落匹配，已显示各自部落名</span>
     </div>
 
     <div class="banner rule-hint">
-      📌 只推荐<b>可交换</b>的组合：<b>双向互补</b>（你给 X、对方给你 Y）或 <b>单方交换</b>（对方有你缺的卡，你任选一张<b>同种类</b>多余卡交换）。只有<b>同种类</b>的卡牌才能互相交换。
+      📌 <b>同部落 或 同渠道（区服）</b>的玩家才能互相换卡；只推荐<b>可交换</b>组合：<b>双向互补</b>或<b>单方交换</b>（任选一张<b>同种类</b>多余卡）。只有<b>同种类</b>的卡牌才能互相交换。
     </div>
 
     <div v-if="notice" class="banner success">{{ notice }}</div>
@@ -174,7 +175,7 @@ onMounted(load);
       <div class="stat"><span class="stat-num">{{ mySpareCount }}</span> 张可提供</div>
       <div class="stat">
         <span class="stat-num">{{ otherMemberCount }}</span>
-        {{ scope === 'all' ? '位可匹配玩家' : '位成员' }}
+        {{ scope === 'channel' ? '位同渠道玩家' : '位成员' }}
       </div>
     </div>
 
@@ -203,7 +204,7 @@ onMounted(load);
 
         <div v-for="(rec, idx) in g.items" :key="idx" class="rec-item" :class="rec.type">
           <div class="rec-partner">
-            <span v-if="scope === 'all' && rec.partner.clanName" class="partner-clan">{{ rec.partner.clanName }}</span>
+            <span v-if="scope === 'channel' && rec.partner.clanName" class="partner-clan">{{ rec.partner.clanName }}</span>
             <span class="partner-name">{{ rec.partner.gameName }}</span>
             <span v-if="rec.partner.playerTag" class="partner-tag">{{ rec.partner.playerTag }}</span>
             <span class="partner-spare">拥有：{{ g.card.name }} × {{ rec.partner.spareQuantity }}</span>

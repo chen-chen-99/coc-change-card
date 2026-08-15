@@ -54,6 +54,7 @@ create table if not exists public.players (
   game_name       text not null,
   access_code     text,                       -- 访问码（可选，用于其他设备换绑）
   keep_base       integer not null default 1, -- 每种卡保留基数，默认 1
+  channel         text not null default 'wechat', -- 登录渠道：wechat 微信区 / qq QQ区
   owner_user_id   uuid,                       -- 绑定的 Supabase 匿名用户 ID
   last_updated_at timestamptz not null default now(),
   created_at      timestamptz not null default now(),
@@ -148,7 +149,8 @@ create or replace function public.login_player(
   p_clan_name   text,
   p_player_name text,
   p_player_tag  text default null,
-  p_access_code text default null
+  p_access_code text default null,
+  p_channel     text default 'wechat'
 ) returns jsonb
 language plpgsql
 security definer
@@ -255,6 +257,14 @@ begin
     v_editable := true;
   end if;
 
+  -- 7) 登录渠道（区服）：默认微信区，可在登录页修改；仅影响匹配结果
+  if p_channel is not null and p_channel <> '' then
+    update public.players
+    set channel = p_channel, last_updated_at = now()
+    where player_id = v_player.player_id;
+    v_player.channel := p_channel;
+  end if;
+
   return jsonb_build_object(
     'player_id',        v_player.player_id,
     'clan_id',          v_player.clan_id,
@@ -265,6 +275,7 @@ begin
     'owner_user_id',    v_player.owner_user_id,
     'access_code_set',  (v_player.access_code is not null and v_player.access_code <> ''),
     'editable',         v_editable,
+    'channel',          v_player.channel,
     'last_updated_at',  v_player.last_updated_at
   );
 end;

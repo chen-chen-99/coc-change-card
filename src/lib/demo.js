@@ -71,10 +71,10 @@ const PATTERNS = {
 };
 
 const MEMBER_META = {
-  xiaoming: { game_name: '小明', player_tag: '#XIAOMING' },
-  xiaohong: { game_name: '小红', player_tag: '#XIAOHONG' },
-  laowang:  { game_name: '老王', player_tag: '#LAOWANG' },
-  aqiang:   { game_name: '阿强', player_tag: '#AQIANG' },
+  xiaoming: { game_name: '小明', player_tag: '#XIAOMING', channel: 'wechat' },
+  xiaohong: { game_name: '小红', player_tag: '#XIAOHONG', channel: 'wechat' },
+  laowang:  { game_name: '老王', player_tag: '#LAOWANG', channel: 'qq' },
+  aqiang:   { game_name: '阿强', player_tag: '#AQIANG', channel: 'wechat' },
 };
 
 function buildMemberInventory(playerId, pattern) {
@@ -102,6 +102,7 @@ const state = {
     owner_user_id: DEMO_USER_ID,
     access_code_set: false,
     editable: false,
+    channel: meta.channel ?? 'wechat',
     last_updated_at: '2026-08-13T12:00:00Z',
   })),
   inventory: Object.entries(MEMBER_META).flatMap(([key]) =>
@@ -109,7 +110,7 @@ const state = {
   ),
 };
 
-function ensurePlayer(gameName, playerTag) {
+function ensurePlayer(gameName, playerTag, channel = 'wechat') {
   let p = state.players.find((x) => x.game_name === gameName);
   if (!p) {
     p = {
@@ -122,6 +123,7 @@ function ensurePlayer(gameName, playerTag) {
       owner_user_id: DEMO_USER_ID,
       access_code_set: false,
       editable: true,
+      channel,
       last_updated_at: nowIso(),
     };
     state.players.push(p);
@@ -141,8 +143,8 @@ export const demoApi = {
     return { id: DEMO_USER_ID };
   },
 
-  async loginPlayer({ clanName, playerName, playerTag }) {
-    const p = ensurePlayer(playerName, playerTag);
+  async loginPlayer({ clanName, playerName, playerTag, channel }) {
+    const p = ensurePlayer(playerName, playerTag, channel);
     return { ...p, clan_name: clanName, editable: true };
   },
 
@@ -205,8 +207,11 @@ export const demoApi = {
     return { status: 'ok', updated };
   },
 
-  async getClanTradingData(clanId, cardIds, scope = 'clan') {
-    const players = state.players.map((p) => ({
+  async getClanTradingData(clanId, cardIds, scope = 'clan', channel = 'wechat') {
+    let scoped = state.players;
+    if (scope === 'clan') scoped = scoped.filter((p) => p.clan_id === clanId);
+    else if (scope === 'channel') scoped = scoped.filter((p) => (p.channel ?? 'wechat') === channel);
+    const players = scoped.map((p) => ({
       player_id: p.player_id,
       game_name: p.game_name,
       player_tag: p.player_tag,
@@ -214,6 +219,7 @@ export const demoApi = {
       last_updated_at: p.last_updated_at,
       clan_id: p.clan_id,
       clan_name: p.clan_name ?? CLAN_NAME,
+      channel: p.channel ?? 'wechat',
     }));
     const inventory = state.inventory.filter((r) => cardIds.includes(r.card_id));
     return { players, inventory };

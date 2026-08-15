@@ -5,21 +5,30 @@ import { signInAnonymously, loginPlayer } from '../lib/api.js';
 
 const emit = defineEmits(['logged-in']);
 
-// 记住上次输入（localStorage），部落默认填"城紫金"
+// 记住上次输入（localStorage），部落默认填"城紫金"、渠道默认微信区
 const DEFAULT_CLAN = '城紫金';
+const DEFAULT_CHANNEL = 'wechat';
+const CHANNELS = [
+  { key: 'wechat', label: '💬 微信区' },
+  { key: 'qq', label: '🐧 QQ区' },
+];
 const KEYS = {
   clan: 'card_clash_clan_name',
   player: 'card_clash_player_name',
   tag: 'card_clash_player_tag',
+  channel: 'card_clash_channel',
 };
 
 const clanName = ref(localStorage.getItem(KEYS.clan) || DEFAULT_CLAN);
 const playerName = ref(localStorage.getItem(KEYS.player) || '');
 const playerTag = ref(localStorage.getItem(KEYS.tag) || '');
-watch([clanName, playerName, playerTag], ([c, p, t]) => {
+const savedChannel = localStorage.getItem(KEYS.channel);
+const channel = ref(savedChannel === 'qq' || savedChannel === 'wechat' ? savedChannel : DEFAULT_CHANNEL);
+watch([clanName, playerName, playerTag, channel], ([c, p, t, ch]) => {
   localStorage.setItem(KEYS.clan, c);
   localStorage.setItem(KEYS.player, p);
   localStorage.setItem(KEYS.tag, t);
+  localStorage.setItem(KEYS.channel, ch);
 });
 const accessCode = ref('');
 const submitting = ref(false);
@@ -39,6 +48,7 @@ async function submit() {
       playerName: playerName.value.trim(),
       playerTag: playerTag.value.trim(),
       accessCode: accessCode.value.trim(),
+      channel: channel.value,
     });
     session.user = user;
     session.player = player;
@@ -57,6 +67,20 @@ async function submit() {
     <p class="subtitle">只需填写玩家名称，进入你的卡牌管理页</p>
 
     <form class="form" @submit.prevent="submit">
+      <label class="field">
+        <span>登录渠道（区服）</span>
+        <div class="channel-seg">
+          <button
+            v-for="c in CHANNELS"
+            :key="c.key"
+            type="button"
+            :class="['scope-btn', { active: channel === c.key }]"
+            @click="channel = c.key"
+          >{{ c.label }}</button>
+        </div>
+        <small class="field-hint">同部落或同渠道（区服）的玩家才能互相换卡；此处仅影响换卡匹配，不影响账号识别。</small>
+      </label>
+
       <label class="field">
         <span>部落名称</span>
         <input v-model.trim="clanName" placeholder="城紫金" required />

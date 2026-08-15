@@ -12,14 +12,15 @@ export async function signInAnonymously() {
   return data.user;
 }
 
-/** 登录/进入：找或建部落、玩家，初始化库存（服务端 RPC） */
-export async function loginPlayer({ clanName, playerName, playerTag, accessCode }) {
-  if (isDemoMode) return demoApi.loginPlayer({ clanName, playerName, playerTag });
+/** 登录/进入：找或建部落、玩家，初始化库存（服务端 RPC）。channel: 'wechat' 微信区 / 'qq' QQ区 */
+export async function loginPlayer({ clanName, playerName, playerTag, accessCode, channel }) {
+  if (isDemoMode) return demoApi.loginPlayer({ clanName, playerName, playerTag, channel });
   const { data, error } = await supabase.rpc('login_player', {
     p_clan_name: clanName,
     p_player_name: playerName,
     p_player_tag: playerTag || null,
     p_access_code: accessCode || null,
+    p_channel: channel || 'wechat',
   });
   if (error) throw new Error(`进入失败：${error.message}`);
   return data;
@@ -86,14 +87,16 @@ export async function updateQuantity(playerId, cardId, quantity) {
 
 /**
  * 玩家 + 本活动库存（用于换卡匹配）
- * @param {string} scope 'clan' 仅同部落 | 'all' 所有部落
+ * @param {string} scope 'clan' 仅同部落 | 'channel' 同渠道（区服）
+ * @param {string} channel 当前玩家登录渠道：'wechat' | 'qq'
  */
-export async function getClanTradingData(clanId, cardIds, scope = 'clan') {
-  if (isDemoMode) return demoApi.getClanTradingData(clanId, cardIds, scope);
+export async function getClanTradingData(clanId, cardIds, scope = 'clan', channel = 'wechat') {
+  if (isDemoMode) return demoApi.getClanTradingData(clanId, cardIds, scope, channel);
   let query = supabase
     .from('players')
-    .select('player_id, game_name, player_tag, keep_base, last_updated_at, clan_id, clans(name)');
+    .select('player_id, game_name, player_tag, keep_base, last_updated_at, clan_id, channel, clans(name)');
   if (scope === 'clan') query = query.eq('clan_id', clanId);
+  else if (scope === 'channel') query = query.eq('channel', channel);
   const { data: players, error: err1 } = await query;
   if (err1) throw new Error(`读取玩家数据失败：${err1.message}`);
 
@@ -105,6 +108,7 @@ export async function getClanTradingData(clanId, cardIds, scope = 'clan') {
     last_updated_at: p.last_updated_at,
     clan_id: p.clan_id,
     clan_name: p.clans?.name ?? null,
+    channel: p.channel ?? 'wechat',
   }));
   if (!cardIds.length || list.length === 0) {
     return { players: list, inventory: [] };
