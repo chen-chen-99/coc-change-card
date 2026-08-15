@@ -25,12 +25,14 @@ const catShort = computed(() => categoryShort(props.card.category));
 
 <template>
   <div class="card-item" :class="{ missing: view.missing }">
+    <span class="card-cat-badge" :title="catShort">{{ catShort }}</span>
+
     <div class="card-image">
       <img v-if="!imgFailed" :src="imageSrc" :alt="card.name" loading="lazy" @error="imgFailed = true" />
       <div v-else class="card-fallback">{{ card.name }}</div>
     </div>
 
-    <div class="card-name" :title="catShort">{{ card.name }}</div>
+    <div class="card-name" :title="card.name">{{ card.name }}</div>
 
     <div class="card-qty">
       <button
@@ -38,19 +40,12 @@ const catShort = computed(() => categoryShort(props.card.category));
         :disabled="!editable || view.quantity === 0"
         @click="emit('change', card.card_id, -1)"
       >−</button>
-      <span class="qty-num">{{ view.quantity }}</span>
+      <span class="qty-num" :class="{ zero: view.missing, positive: view.quantity > 1 }">{{ view.quantity }}</span>
       <button
         class="btn btn-qty"
         :disabled="!editable"
         @click="emit('change', card.card_id, 1)"
       >＋</button>
-    </div>
-
-    <div class="card-tags">
-      <span class="tag tag-category">{{ catShort }}</span>
-      <span v-if="view.missing" class="tag tag-missing">缺少</span>
-      <span v-else class="tag tag-owned">已收集</span>
-      <span v-if="view.hasSpare" class="tag tag-spare">多余 {{ view.spare }} 张</span>
     </div>
   </div>
 </template>

@@ -168,6 +168,7 @@ body {
   gap: 14px;
 }
 .card-item {
+  position: relative;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -178,7 +179,9 @@ body {
   gap: 8px;
   transition: border-color 0.15s;
 }
-.card-item.missing { border-color: rgba(239,106,106,0.55); }
+.card-item.missing { border-color: var(--red); }
+.card-item.missing .card-image { filter: grayscale(1); opacity: 0.72; }
+
 .card-image {
   width: 84px;
   height: 84px;
@@ -217,18 +220,24 @@ body {
   align-items: center;
   justify-content: center;
 }
-.qty-num { font-size: 18px; font-weight: 700; min-width: 26px; text-align: center; }
+.qty-num { font-size: 18px; font-weight: 700; min-width: 26px; text-align: center; color: var(--text); }
+.qty-num.zero { color: var(--red); }
+.qty-num.positive { color: var(--green); }
 
-.card-tags { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
-.tag {
-  font-size: 11px;
-  padding: 2px 8px;
+
+.card-cat-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 1;
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 7px;
   border-radius: 999px;
-  border: 1px solid transparent;
+  background: rgba(242, 193, 78, 0.14);
+  color: var(--gold);
+  border: 1px solid var(--gold-dark);
 }
-.tag-missing { background: rgba(239,106,106,0.15); color: #ffb3b3; border-color: var(--red); }
-.tag-owned { background: rgba(90,169,255,0.12); color: var(--blue); border-color: var(--blue); }
-.tag-spare { background: rgba(76,208,125,0.12); color: var(--green); border-color: var(--green); }
 
 /* ---------- 鎹㈠崱鎺ㄨ崘 ---------- */
 .stats-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -378,7 +387,7 @@ body {
 .chip.active { background: var(--gold); border-color: var(--gold); color: #1a2230; font-weight: 600; }
 
 /* ---------- 种类标签 ---------- */
-.tag-category { background: rgba(242,193,78,0.12); color: var(--gold); border-color: var(--gold); }
+
 
 /* ---------- 换卡页种类徽标与规则提示 ---------- */
 .rec-category {
