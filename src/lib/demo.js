@@ -273,6 +273,12 @@ export const demoApi = {
     return { status: 'ok', updated };
   },
 
+  async getExchangeStats() {
+    return {
+      playerCount: state.players.length,
+      exchangeCount: state.exchanges.length,
+    };
+  },
   async getClanTradingData(clanId, cardIds, scope = 'clan', channel = 'wechat') {
     let scoped = state.players;
     if (scope === 'clan') scoped = scoped.filter((p) => p.clan_id === clanId);

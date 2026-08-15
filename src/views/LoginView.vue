@@ -1,7 +1,7 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { session } from '../lib/store.js';
-import { signInAnonymously, loginPlayer } from '../lib/api.js';
+import { signInAnonymously, loginPlayer, getExchangeStats } from '../lib/api.js';
 
 const emit = defineEmits(['logged-in']);
 
@@ -31,6 +31,15 @@ watch([clanName, playerName, playerTag, channel], ([c, p, t, ch]) => {
   localStorage.setItem(KEYS.channel, ch);
 });
 const accessCode = ref('');
+const stats = ref(null);
+
+onMounted(async () => {
+  try {
+    stats.value = await getExchangeStats();
+  } catch {
+    // 统计加载失败不影响登录
+  }
+});
 const submitting = ref(false);
 const error = ref('');
 
@@ -65,6 +74,7 @@ async function submit() {
   <section class="login-card">
     <h1>🏰 卡牌冲突换卡助手</h1>
     <p class="subtitle">只需填写玩家名称，进入你的卡牌管理页</p>
+    <p v-if="stats" class="stats-line">👥 已有 {{ stats.playerCount }} 位成员 · 🏆 累计成功换卡 {{ stats.exchangeCount }} 次</p>
 
     <form class="form" @submit.prevent="submit">
       <label class="field">

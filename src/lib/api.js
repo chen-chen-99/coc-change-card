@@ -192,6 +192,17 @@ export async function undoExchange(exchangeId) {
   if (error) throw new Error(`撤销失败：${error.message}`);
   return data;
 }
+/** 全站统计：玩家总数 + 成功换卡次数（供登录页/推荐页展示） */
+export async function getExchangeStats() {
+  if (isDemoMode) return demoApi.getExchangeStats();
+  const [pRes, eRes] = await Promise.all([
+    supabase.from('players').select('player_id', { count: 'exact', head: true }),
+    supabase.from('exchanges').select('exchange_id', { count: 'exact', head: true }),
+  ]);
+  if (pRes.error) throw new Error(`读取统计失败：${pRes.error.message}`);
+  if (eRes.error) throw new Error(`读取统计失败：${eRes.error.message}`);
+  return { playerCount: pRes.count ?? 0, exchangeCount: eRes.count ?? 0 };
+}
 /** 设置/修改/清除访问码（RPC：无访问码可任意设置；已设置则仅主人可改） */
 export async function setAccessCode(playerId, newCode) {
   if (isDemoMode) return demoApi.setAccessCode(playerId, newCode);
