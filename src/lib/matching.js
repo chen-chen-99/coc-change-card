@@ -131,6 +131,80 @@ export function buildRecommendations({ me, clanMembers = [], cards = [], invento
   return result;
 }
 
+/**
+ * 凑卡兑换推荐（独立功能，不混入换卡推荐）
+ * 背景：游戏可用「两张多余卡」兑换任意卡，因此玩家可能想凑齐某张卡到 targetCount 张。
+ * 逻辑：
+ *   - 匹配所有「有多余 targetCard」的成员；
+ *   - 优先「双向」：对方恰好缺我能给的（同种类）卡，其次「单方」：我任选一张同种类多余卡交换；
+ *   - 排序：双向优先 → 解决需求多优先 → 对方余量多优先 → 数据新优先。
+ * @returns {{ need: number, recs: Array<{type, iGet, iGive, mySpareOptions, preferredGive, partner, resolvedCount}> }}
+ */
+export function buildCollectRecommendations({ me, clanMembers = [], cards = [], inventory = [], targetCard, targetCount = 3 }) {
+  const q = {};
+  for (const row of inventory) {
+    if (!q[row.player_id]) q[row.player_id] = {};
+    q[row.player_id][row.card_id] = row.quantity;
+  }
+  const quantityOf = (playerId, cardId) => q[playerId]?.[cardId] ?? 0;
+  const keepOf = (player) => player.keep_base ?? 1;
+  const hasSpare = (player, cardId) => quantityOf(player.player_id, cardId) - keepOf(player) > 0;
+
+  const myQty = quantityOf(me.player_id, targetCard.card_id);
+  const need = Math.max(0, targetCount - myQty);
+  if (need <= 0) return { need: 0, recs: [] };
+
+  // 我可给出的「同种类多余卡」选项
+  const mySpareOptions = cards
+    .filter((c) => c.category === targetCard.category && hasSpare(me, c.card_id))
+    .map((c) => ({
+      card_id: c.card_id,
+      name: c.name,
+      spare: quantityOf(me.player_id, c.card_id) - keepOf(me),
+    }));
+  if (mySpareOptions.length === 0) return { need, recs: [] };
+
+  const providers = clanMembers.filter(
+    (m) => m.player_id !== me.player_id && hasSpare(m, targetCard.card_id)
+  );
+
+  const recs = [];
+  for (const p of providers) {
+    // 对方缺的卡里，是否有同种类且我有多余的 → 双向
+    const pMissing = cards.filter(
+      (c) => c.category === targetCard.category && quantityOf(p.player_id, c.card_id) === 0
+    );
+    const mutual = pMissing.filter((c) => hasSpare(me, c.card_id));
+
+    recs.push({
+      type: mutual.length > 0 ? 'twoWay' : 'oneWay',
+      iGet: targetCard,                                  // 我获得（凑卡目标）
+      iGive: null,                                       // 我给对方的卡（前端选择）
+      mySpareOptions,
+      preferredGive: mutual.length > 0 ? mutual[0].card_id : null, // 双向时优先给「对方缺的卡」
+      partner: {
+        playerId: p.player_id,
+        gameName: p.game_name,
+        playerTag: p.player_tag ?? null,
+        clanName: p.clan_name ?? null,
+        spareQuantity: quantityOf(p.player_id, targetCard.card_id) - keepOf(p),
+        lastUpdatedAt: p.last_updated_at,
+      },
+      resolvedCount: mutual.length > 0 ? 2 : 1,
+    });
+  }
+
+  const typeRank = { twoWay: 0, oneWay: 1 };
+  recs.sort((a, b) => {
+    if (typeRank[a.type] !== typeRank[b.type]) return typeRank[a.type] - typeRank[b.type];
+    if (b.resolvedCount !== a.resolvedCount) return b.resolvedCount - a.resolvedCount;
+    if (b.partner.spareQuantity !== a.partner.spareQuantity)
+      return b.partner.spareQuantity - a.partner.spareQuantity;
+    return String(b.partner.lastUpdatedAt).localeCompare(String(a.partner.lastUpdatedAt));
+  });
+
+  return { need, recs };
+}
 /** 按"我缺少的卡"分组，供换卡页面展示 */
 export function groupByNeededCard(recommendations) {
   const groups = new Map();

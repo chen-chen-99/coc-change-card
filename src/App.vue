@@ -7,6 +7,7 @@ import LoginView from './views/LoginView.vue';
 import MyCardsView from './views/MyCardsView.vue';
 import TradeView from './views/TradeView.vue';
 import ExchangeRecordsView from './views/ExchangeRecordsView.vue';
+import CollectView from './views/CollectView.vue';
 
 const activeTab = ref('cards');
 
@@ -81,6 +82,10 @@ function logout() {
           @click="activeTab = 'trade'"
         >换卡推荐</button>
         <button
+          :class="['tab', { active: activeTab === 'collect' }]"
+          @click="activeTab = 'collect'"
+        >凑卡兑换</button>
+        <button
           :class="['tab', { active: activeTab === 'records' }]"
           @click="activeTab = 'records'"
         >换卡记录</button>
@@ -102,6 +107,7 @@ function logout() {
         <!-- v-if：每次切入换卡页都重新挂载，自动重新拉取部落数据计算推荐 -->
         <TradeView v-if="activeTab === 'trade'" />
         <ExchangeRecordsView v-if="activeTab === 'records'" />
+        <CollectView v-if="activeTab === 'collect'" />
       </template>
     </main>
 

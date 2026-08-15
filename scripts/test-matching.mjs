@@ -2,7 +2,7 @@
  * 换卡匹配算法单元测试（纯 Node 运行，无依赖）
  * 运行：npm run test:matching  或  node scripts/test-matching.mjs
  */
-import { buildRecommendations, groupByNeededCard, computeCardView } from '../src/lib/matching.js';
+import { buildRecommendations, groupByNeededCard, computeCardView, buildCollectRecommendations } from '../src/lib/matching.js';
 
 let passed = 0;
 let failed = 0;
@@ -210,6 +210,50 @@ const players = (defs) =>
   ]);
   const recs8b = buildRecommendations({ me: me8, clanMembers: clanMembers8, cards: cards8, inventory: rows8b });
   assert(recs8b.length === 0, `无同种类多余卡时不应推荐，实际 ${recs8b.length}`);
+}
+// =====================================================================
+// 用例 9：凑卡兑换 —— 用户想凑齐某张卡到目标张数
+// =====================================================================
+{
+  console.log('\n用例 9：凑卡兑换（优先双向，其次单方）');
+  const cards9 = [
+    { card_id: 'c01', name: '卡牌1', category: 'elixir' },
+    { card_id: 'c02', name: '卡牌2', category: 'elixir' },
+    { card_id: 'c03', name: '卡牌3', category: 'elixir' },
+  ];
+  const me9 = players([['A', '玩家A', 1]])[0];
+  const clanMembers9 = [me9, ...players([['B', '小明', 1], ['C', '小红', 1]])];
+
+  // A 有 c01×1，想凑 3 张；A 有多余 c02×2、c03×1
+  // B 有 c01×2（多余1），缺 c02 → 双向，推荐给 c02
+  // C 有 c01×2（多余1），什么都不缺 → 单方
+  const rows9 = inventory([
+    ['A', 'c01', 1], ['A', 'c02', 3], ['A', 'c03', 2],
+    ['B', 'c01', 2], ['B', 'c02', 0], ['B', 'c03', 1],
+    ['C', 'c01', 2], ['C', 'c02', 1], ['C', 'c03', 1],
+  ]);
+  const target9 = cards9[0]; // c01
+  const res9 = buildCollectRecommendations({
+    me: me9, clanMembers: clanMembers9, cards: cards9, inventory: rows9,
+    targetCard: target9, targetCount: 3,
+  });
+
+  assert(res9.need === 2, `还差 2 张，实际 ${res9.need}`);
+  assert(res9.recs.length === 2, `应生成 2 条凑卡推荐，实际 ${res9.recs.length}`);
+  assert(res9.recs[0].type === 'twoWay' && res9.recs[0].partner.gameName === '小明', '第 1 条应为与小明双向');
+  assert(res9.recs[0].preferredGive === 'c02', `双向优先给卡牌2，实际 ${res9.recs[0].preferredGive}`);
+  assert(res9.recs[1].type === 'oneWay' && res9.recs[1].partner.gameName === '小红', '第 2 条应为与小红单向');
+
+  // 已凑够 3 张 → 不需要再换
+  const rows9b = inventory([
+    ['A', 'c01', 3], ['A', 'c02', 3], ['A', 'c03', 1],
+    ['B', 'c01', 2], ['B', 'c02', 0], ['B', 'c03', 1],
+  ]);
+  const res9b = buildCollectRecommendations({
+    me: me9, clanMembers: clanMembers9, cards: cards9, inventory: rows9b,
+    targetCard: target9, targetCount: 3,
+  });
+  assert(res9b.need === 0 && res9b.recs.length === 0, '已凑满 3 张 → 无需推荐');
 }
 console.log(`\n结果：${passed} 通过，${failed} 失败`);
 if (failed > 0) process.exit(1);
