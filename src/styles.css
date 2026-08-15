@@ -94,6 +94,45 @@ body {
   flex-wrap: wrap;
 }
 .section-head h2 { margin: 0; font-size: 20px; }
+.head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.btn-records { background: rgba(90, 169, 255, 0.12); border-color: var(--blue); color: var(--blue); font-weight: 600; }
+.btn-records:hover:not(:disabled) { background: rgba(90, 169, 255, 0.22); }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 14, 24, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+.modal {
+  width: 100%;
+  max-width: 640px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-head h3 { margin: 0; font-size: 17px; }
+.modal-body {
+  padding: 14px 16px;
+  overflow-y: auto;
+}
+
 
 /* ---------- 鎻愮ず鏉?---------- */
 .banner {

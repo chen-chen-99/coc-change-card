@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { session } from '../lib/store.js';
-import { getClanTradingData, executeExchange } from '../lib/api.js';
+import { getClanTradingData, executeExchange, getMyExchangeCount } from '../lib/api.js';
+import ExchangeRecordsModal from '../components/ExchangeRecordsModal.vue';
 import { buildRecommendations, groupByNeededCard } from '../lib/matching.js';
 import { categoryLabel } from '../lib/categories.js';
 
@@ -16,6 +17,8 @@ const groups = ref([]);
 const myMissingCount = ref(0);
 const mySpareCount = ref(0);
 const otherMemberCount = ref(0);
+const myExchangeCount = ref(0);
+const showRecords = ref(false);
 /** 匹配范围：'clan' 仅同部落 | 'channel' 同渠道（区服）；默认同渠道（同部落人数较少） */
 const scope = ref('channel');
 /** 单向交换中，我选择给出的多余卡（key -> card_id） */
@@ -69,6 +72,7 @@ async function load() {
     myMissingCount.value = missing;
     mySpareCount.value = spare;
     otherMemberCount.value = players.filter((p) => p.player_id !== me.player_id).length;
+    myExchangeCount.value = await getMyExchangeCount(session.player.player_id);
   } catch (e) {
     error.value = e.message;
   } finally {
@@ -80,6 +84,11 @@ function setScope(s) {
   if (scope.value === s) return;
   scope.value = s;
   notice.value = '';
+  load();
+}
+
+/** 弹窗内撤销后：刷新推荐数据与个人换卡次数 */
+function onRecordsChanged() {
   load();
 }
 
@@ -146,7 +155,10 @@ onMounted(load);
   <section>
     <div class="section-head">
       <h2>换卡推荐</h2>
-      <button class="btn" :disabled="loading" @click="load">刷新</button>
+      <div class="head-actions">
+        <button class="btn btn-records" @click="showRecords = true">📋 我的换卡记录（{{ myExchangeCount }}）</button>
+        <button class="btn" :disabled="loading" @click="load">刷新</button>
+      </div>
     </div>
 
     <div class="scope-row">
@@ -248,5 +260,10 @@ onMounted(load);
         </div>
       </div>
     </template>
+    <ExchangeRecordsModal
+      v-if="showRecords"
+      @close="showRecords = false"
+      @changed="onRecordsChanged"
+    />
   </section>
 </template>

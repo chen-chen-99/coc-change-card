@@ -273,6 +273,9 @@ export const demoApi = {
     return { status: 'ok', updated };
   },
 
+  async getMyExchangeCount(playerId) {
+    return state.exchanges.filter((e) => e.player_a === playerId || e.player_b === playerId).length;
+  },
   async getExchangeStats() {
     return {
       playerCount: state.players.length,

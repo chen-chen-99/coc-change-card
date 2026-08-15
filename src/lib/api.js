@@ -185,6 +185,16 @@ export async function getMyExchangeRecords(playerId, cardIds) {
   });
 }
 
+/** 我的成功换卡次数（涉及我的交换记录数） */
+export async function getMyExchangeCount(playerId) {
+  if (isDemoMode) return demoApi.getMyExchangeCount(playerId);
+  const { count, error } = await supabase
+    .from('exchanges')
+    .select('exchange_id', { count: 'exact', head: true })
+    .or(`player_a.eq.${playerId},player_b.eq.${playerId}`);
+  if (error) throw new Error(`读取换卡记录失败：${error.message}`);
+  return count ?? 0;
+}
 /** 撤销一笔交换（RPC：仅交换双方之一可撤销；校验库存足以归还） */
 export async function undoExchange(exchangeId) {
   if (isDemoMode) return demoApi.undoExchange(exchangeId);
