@@ -22,10 +22,7 @@ const scope = ref('clan');
 const cardIds = () => session.cards.map((c) => c.card_id);
 
 /** 每个推荐条目的唯一标识，用于按钮忙碌态 */
-const swapKeyOf = (rec) =>
-  rec.type === 'twoWay'
-    ? `${rec.partner.playerId}:${rec.iGive.card_id}:${rec.iGet.card_id}`
-    : `oneway:${rec.partner.playerId}:${rec.iGet.card_id}`;
+const swapKeyOf = (rec) => `${rec.partner.playerId}:${rec.iGive.card_id}:${rec.iGet.card_id}`;
 
 async function load() {
   loading.value = true;
@@ -40,7 +37,8 @@ async function load() {
     if (!me) throw new Error('未找到当前玩家数据');
 
     const recs = buildRecommendations({ me, clanMembers: players, cards: session.cards, inventory });
-    groups.value = groupByNeededCard(recs);
+    // 只展示可交换（双向互补）的推荐，不展示单向结果
+    groups.value = groupByNeededCard(recs.filter((r) => r.type === 'twoWay'));
 
     const myRows = inventory.filter((r) => r.player_id === me.player_id);
     const keep = me.keep_base ?? 1;
@@ -73,7 +71,6 @@ function setScope(s) {
  * 服务端校验余量/同种类/防重复；返回后刷新推荐。
  */
 async function onSwap(rec) {
-  if (rec.type !== 'twoWay') return;
   if (!session.activity) {
     error.value = '暂无活动数据，无法交换';
     return;
@@ -138,7 +135,7 @@ onMounted(load);
       <span v-if="scope === 'all'" class="scope-hint">已显示其他部落成员的部落名</span>
     </div>
 
-    <div class="banner rule-hint">📌 规则：只有<b>同种类</b>的卡牌才能互相交换（圣水 / 暗黑重油 / 建筑大师基地 / 超级兵种）。</div>
+    <div class="banner rule-hint">📌 仅展示<b>可交换</b>（双向互补）的推荐；只有<b>同种类</b>的卡牌才能互相交换（圣水 / 暗黑重油 / 建筑大师基地 / 超级兵种）。</div>
 
     <div v-if="notice" class="banner success">{{ notice }}</div>
 
@@ -158,7 +155,7 @@ onMounted(load);
       <div v-if="myMissingCount === 0" class="banner success">🎉 你已经集齐全部卡牌，无需换卡！</div>
 
       <div v-else-if="groups.length === 0" class="banner">
-        暂无可匹配的换卡对象。等待更多玩家录入卡牌数据后刷新查看。
+        暂无可交换的换卡对象。等待更多玩家录入卡牌数据后刷新查看。
       </div>
 
       <div v-for="g in groups" :key="g.card.card_id" class="rec-group">
@@ -174,7 +171,7 @@ onMounted(load);
           <span class="rec-group-count">{{ g.items.length }} 个匹配</span>
         </div>
 
-        <div v-for="(rec, idx) in g.items" :key="idx" class="rec-item" :class="rec.type">
+        <div v-for="(rec, idx) in g.items" :key="idx" class="rec-item twoWay">
           <div class="rec-partner">
             <span v-if="scope === 'all' && rec.partner.clanName" class="partner-clan">{{ rec.partner.clanName }}</span>
             <span class="partner-name">{{ rec.partner.gameName }}</span>
@@ -183,33 +180,18 @@ onMounted(load);
           </div>
 
           <div class="rec-flow">
-            <template v-if="rec.type === 'twoWay'">
-              <div class="flow-line">你 → {{ rec.partner.gameName }}：{{ rec.iGive.name }}</div>
-              <div class="flow-line">{{ rec.partner.gameName }} → 你：{{ rec.iGet.name }}</div>
-            </template>
-            <template v-else>
-              <div class="flow-line">{{ rec.partner.gameName }} → 你：{{ rec.iGet.name }}</div>
-            </template>
+            <div class="flow-line">你 → {{ rec.partner.gameName }}：{{ rec.iGive.name }}</div>
+            <div class="flow-line">{{ rec.partner.gameName }} → 你：{{ rec.iGet.name }}</div>
           </div>
 
-          <div class="rec-badge" :class="rec.type">
-            <template v-if="rec.type === 'twoWay'">★★★★★ 双向交换</template>
-            <template v-else>单向 · 对方有你缺的卡</template>
-          </div>
+          <div class="rec-badge twoWay">★★★★★ 双向交换</div>
 
           <div class="rec-swap">
             <button
-              v-if="rec.type === 'twoWay'"
               class="btn btn-swap"
               :disabled="busyKey === swapKeyOf(rec)"
               @click="onSwap(rec)"
             >{{ busyKey === swapKeyOf(rec) ? '同步中…' : '✅ 交换完成，同步数据' }}</button>
-            <button
-              v-else
-              class="btn btn-swap btn-swap-disabled"
-              disabled
-              title="单向推荐没有约定换出卡，需双方约定后从双向推荐一键同步"
-            >单向无法一键同步</button>
           </div>
 
           <div v-if="rec.partner.lastUpdatedAt" class="rec-meta">
