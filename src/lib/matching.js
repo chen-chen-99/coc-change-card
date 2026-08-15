@@ -154,15 +154,11 @@ export function buildCollectRecommendations({ me, clanMembers = [], cards = [], 
   const need = Math.max(0, targetCount - myQty);
   if (need <= 0) return { need: 0, recs: [] };
 
-  // 我可给出的「同种类多余卡」选项
-  const mySpareOptions = cards
-    .filter((c) => c.category === targetCard.category && hasSpare(me, c.card_id))
-    .map((c) => ({
-      card_id: c.card_id,
-      name: c.name,
-      spare: quantityOf(me.player_id, c.card_id) - keepOf(me),
-    }));
-  if (mySpareOptions.length === 0) return { need, recs: [] };
+  // 我是否有同种类多余卡（全局快速判断；具体选项按「对方是否缺少」逐人过滤）
+  const mySameCategorySpares = cards.filter(
+    (c) => c.category === targetCard.category && hasSpare(me, c.card_id)
+  );
+  if (mySameCategorySpares.length === 0) return { need, recs: [] };
 
   const providers = clanMembers.filter(
     (m) => m.player_id !== me.player_id && hasSpare(m, targetCard.card_id)
@@ -177,6 +173,13 @@ export function buildCollectRecommendations({ me, clanMembers = [], cards = [], 
     const mutual = pMissing.filter((c) => hasSpare(me, c.card_id));
     // 纯单方（对方不缺我有的卡）无法在游戏内发起换卡请求，直接屏蔽
     if (mutual.length === 0) continue;
+
+    // 可给出选项 = 对方缺少 且 我多余的（同种类）卡
+    const mySpareOptions = mutual.map((c) => ({
+      card_id: c.card_id,
+      name: c.name,
+      spare: quantityOf(me.player_id, c.card_id) - keepOf(me),
+    }));
 
     recs.push({
       type: 'twoWay',

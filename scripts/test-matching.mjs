@@ -242,6 +242,7 @@ const players = (defs) =>
   assert(res9.recs.length === 1, `只保留双向（单方被屏蔽），实际 ${res9.recs.length}`);
   assert(res9.recs[0].type === 'twoWay' && res9.recs[0].partner.gameName === '小明', '应为与小明双向');
   assert(res9.recs[0].preferredGive === 'c02', `双向优先给卡牌2，实际 ${res9.recs[0].preferredGive}`);
+  assert(res9.recs[0].mySpareOptions?.length === 1 && res9.recs[0].mySpareOptions[0]?.card_id === 'c02', '下拉选项只含「对方缺少且我多余」的卡牌2（不含卡牌3）');
   assert(res9.recs.every((r) => r.type === 'twoWay'), '凑卡兑换只保留双向组合');
   assert(!res9.recs.some((r) => r.partner.gameName === '小红'), '小红什么都不缺（单方）→ 被屏蔽');
 

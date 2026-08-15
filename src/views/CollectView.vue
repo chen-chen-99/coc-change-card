@@ -243,7 +243,7 @@ async function onSwap(rec) {
         <div class="rec-badge twoWay">★★★★★ 双向优先（对方缺你能给的卡）</div>
 
         <div class="rec-give-pick">
-          <span class="give-pick-label">你给（任选一张同种类多余卡）：</span>
+          <span class="give-pick-label">你给（对方缺少、你多余的卡）：</span>
           <select v-model="selectedGive[swapKeyOf(rec)]" class="give-pick-select">
             <option v-for="opt in rec.mySpareOptions" :key="opt.card_id" :value="opt.card_id">
               {{ opt.name }} × {{ opt.spare }}
