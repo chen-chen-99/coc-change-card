@@ -6,15 +6,19 @@ import { CATEGORIES } from '../lib/categories.js';
 import CardItem from '../components/CardItem.vue';
 
 const categoryFilter = ref('all');
+const searchQuery = ref('');
+
 const editable = computed(() => session.player?.editable !== false);
 const keepBase = computed(() => session.player?.keep_base ?? 1);
 const hasCode = computed(() => session.player?.access_code_set === true);
 
-const cardsWithQty = computed(() =>
-  session.cards
+const cardsWithQty = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  return session.cards
     .filter((c) => categoryFilter.value === 'all' || c.category === categoryFilter.value)
-    .map((card) => ({ card, quantity: session.inventory[card.card_id] ?? 0 }))
-);
+    .filter((c) => !q || c.name.toLowerCase().includes(q) || c.card_id.toLowerCase().includes(q))
+    .map((card) => ({ card, quantity: session.inventory[card.card_id] ?? 0 }));
+});
 
 const stats = computed(() => {
   let owned = 0;
@@ -80,6 +84,16 @@ async function onSetCode() {
       </button>
     </div>
 
+    <div class="search-row">
+      <input
+        v-model="searchQuery"
+        type="search"
+        class="search-input"
+        placeholder="🔍 搜索兵种名称或编号，如：野蛮人 / 皮卡 / e01"
+      />
+      <span v-if="searchQuery.trim()" class="search-count">找到 {{ cardsWithQty.length }} 张</span>
+    </div>
+
     <div class="category-chips">
       <button
         :class="['chip', { active: categoryFilter === 'all' }]"
@@ -91,6 +105,10 @@ async function onSetCode() {
         :class="['chip', { active: categoryFilter === c.key }]"
         @click="categoryFilter = c.key"
       >{{ c.label }}</button>
+    </div>
+
+    <div v-if="searchQuery.trim() && cardsWithQty.length === 0" class="banner">
+      没有找到匹配的兵种，换个关键词试试。
     </div>
 
     <div class="card-grid">

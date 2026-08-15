@@ -320,6 +320,22 @@ body {
 .banner.demo { border-color: var(--blue); color: #cfe6ff; background: rgba(90,169,255,0.08); }
 .banner.demo code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
 /* ---------- 种类筛选 ---------- */
+.search-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.search-input {
+  flex: 1;
+  min-width: 200px;
+  max-width: 420px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+}
+.search-input:focus { border-color: var(--blue); }
+.search-input::placeholder { color: var(--text-dim); }
+.search-count { color: var(--text-dim); font-size: 13px; }
 .category-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .chip {
   background: var(--bg-soft);
