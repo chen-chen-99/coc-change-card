@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { session } from '../lib/store.js';
-import { getClanTradingData, executeExchange, getExchangeStats } from '../lib/api.js';
+import { getClanTradingData, executeExchange } from '../lib/api.js';
 import { buildRecommendations, groupByNeededCard } from '../lib/matching.js';
 import { categoryLabel } from '../lib/categories.js';
 
@@ -16,7 +16,6 @@ const groups = ref([]);
 const myMissingCount = ref(0);
 const mySpareCount = ref(0);
 const otherMemberCount = ref(0);
-const exchangeCount = ref(0);
 /** 匹配范围：'clan' 仅同部落 | 'channel' 同渠道（区服）；默认同渠道（同部落人数较少） */
 const scope = ref('channel');
 /** 单向交换中，我选择给出的多余卡（key -> card_id） */
@@ -70,12 +69,6 @@ async function load() {
     myMissingCount.value = missing;
     mySpareCount.value = spare;
     otherMemberCount.value = players.filter((p) => p.player_id !== me.player_id).length;
-    try {
-      const s = await getExchangeStats();
-      exchangeCount.value = s.exchangeCount;
-    } catch {
-      // 统计失败不影响推荐
-    }
   } catch (e) {
     error.value = e.message;
   } finally {
@@ -184,7 +177,6 @@ onMounted(load);
         <span class="stat-num">{{ otherMemberCount }}</span>
         {{ scope === 'channel' ? '位同渠道玩家' : '位成员' }}
       </div>
-      <div class="stat"><span class="stat-num">{{ exchangeCount }}</span> 次成功换卡</div>
     </div>
 
     <div v-if="loading" class="banner">正在计算匹配…</div>
