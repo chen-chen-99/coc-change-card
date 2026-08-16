@@ -504,9 +504,10 @@ begin
 
   if not exists (
     select 1 from public.players p
-    where p.player_id in (v_a, v_b) and p.owner_user_id = v_uid
+    where p.player_id in (v_a, v_b)
+      and (p.owner_user_id = v_uid or p.access_code is null or p.access_code = '')
   ) then
-    raise exception '无权执行该交换（需为交换双方之一）';
+    raise exception '无权执行该交换（需为交换双方之一，或对方为未设访问码的开放账号）';
   end if;
 
   select * into v_card_a from public.cards where card_id = v_ca and activity_id = p_activity_id;
@@ -602,9 +603,10 @@ begin
 
   if not exists (
     select 1 from public.players p
-    where p.player_id in (v_ex.player_a, v_ex.player_b) and p.owner_user_id = v_uid
+    where p.player_id in (v_ex.player_a, v_ex.player_b)
+      and (p.owner_user_id = v_uid or p.access_code is null or p.access_code = '')
   ) then
-    raise exception '无权撤销该交换（需为交换双方之一）';
+    raise exception '无权撤销该交换（需为交换双方之一，或对方为未设访问码的开放账号）';
   end if;
 
   perform pg_advisory_xact_lock(hashtextextended('undo:' || p_exchange_id::text, 0));

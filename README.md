@@ -59,7 +59,7 @@
 
 1. 在 [supabase.com](https://supabase.com) 新建项目。
 2. 打开 **SQL Editor**，把 `supabase/schema.sql` 全部内容粘贴执行（建表 + RLS + RPC + 60 张真实卡牌 + 一键交换）。
-   > 若数据库已有旧数据，请按顺序执行 `migration_v2_cards.sql` → `migration_v3_access_code.sql` → `migration_v4_login_set_code.sql` → `migration_v5_exchange.sql` → `migration_v6_cross_clan_exchange.sql`（跨部落/跨渠道交换）→ `migration_v7_channel.sql`（登录渠道）→ `migration_v8_undo_exchange.sql`（撤销交换）。
+   > 若数据库已有旧数据，请按顺序执行 `migration_v2_cards.sql` → `migration_v3_access_code.sql` → `migration_v4_login_set_code.sql` → `migration_v5_exchange.sql` → `migration_v6_cross_clan_exchange.sql`（跨部落/跨渠道交换）→ `migration_v7_channel.sql`（登录渠道）→ `migration_v8_undo_exchange.sql`（撤销交换）→ `migration_v9_open_account_permission.sql`（开放账号权限修复）。
 3. 打开 **Authentication → Sign In / Up**，开启 **Allow anonymous sign-ins**（匿名登录是本项目的身份基础）。
 4. 打开 **Project Settings → API**，复制 `Project URL` 和 `anon public key`。
 
