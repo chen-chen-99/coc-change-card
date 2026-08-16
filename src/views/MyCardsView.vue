@@ -7,6 +7,7 @@ import CardItem from '../components/CardItem.vue';
 
 const categoryFilter = ref('all');
 const searchQuery = ref('');
+const hideSingle = ref(false); // 隐藏/显示数量为 1 的兵种
 
 const editable = computed(() => session.player?.editable !== false);
 const keepBase = computed(() => session.player?.keep_base ?? 1);
@@ -17,6 +18,7 @@ const cardsWithQty = computed(() => {
   return session.cards
     .filter((c) => categoryFilter.value === 'all' || c.category === categoryFilter.value)
     .filter((c) => !q || c.name.toLowerCase().includes(q) || c.card_id.toLowerCase().includes(q))
+    .filter((c) => !hideSingle.value || (session.inventory[c.card_id] ?? 0) !== 1)
     .map((card) => ({ card, quantity: session.inventory[card.card_id] ?? 0 }));
 });
 
@@ -92,6 +94,11 @@ async function onSetCode() {
         placeholder="🔍 搜索兵种名称或编号，如：野蛮人 / 皮卡 / e01"
       />
       <span v-if="searchQuery.trim()" class="search-count">找到 {{ cardsWithQty.length }} 张</span>
+      <button
+        class="btn btn-toggle-single"
+        :class="{ active: hideSingle }"
+        @click="hideSingle = !hideSingle"
+      >{{ hideSingle ? '👁️ 显示仅有1张的' : '🙈 隐藏仅有1张的' }}</button>
     </div>
 
     <div class="category-chips">

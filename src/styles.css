@@ -483,6 +483,9 @@ body {
 .search-input:focus { border-color: var(--blue); }
 .search-input::placeholder { color: var(--text-dim); }
 .search-count { color: var(--text-dim); font-size: 13px; }
+.btn-toggle-single { font-size: 13px; padding: 7px 12px; }
+.btn-toggle-single.active { border-color: var(--gold); color: var(--gold); background: rgba(242,193,78,0.08); }
+
 .scope-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 .scope-label { color: var(--text-dim); font-size: 13px; }
 .scope-seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
