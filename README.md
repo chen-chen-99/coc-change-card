@@ -18,6 +18,7 @@
 - **换卡记录 / 撤销**：「换卡记录」页展示历史交换，误点可一键撤销恢复双方数据（仅交换双方之一可撤销，需双方库存仍可归还）。
 - **凑卡兑换**：想用「两张多余卡」兑换任意卡时，可先凑齐某张卡到目标张数（3/4/5）；选择目标卡后自动匹配有多余该卡的人，**仅展示对方也缺你能给的卡**的双向组合（纯单方无法在游戏内发起换卡），支持一键交换。
 - **访问码**：未设置 → 任何设备可登录修改；已设置 → 仅主人可改，其他设备输入正确访问码可接管。
+- **邮件通知**：顶部 🔔 按钮可绑定邮箱并开启通知（可选：仅双向 / 双向+单向）；系统每 30 分钟检查一次，当「从没有可交换卡牌 → 出现可交换卡牌」时自动发送**一封**邮件提醒，无需一直盯着系统。
 - **页脚免责声明**：已展示 Supercell 玩家内容条款声明（使用官方素材合规）。
 
 ## 🧱 技术栈
@@ -26,6 +27,7 @@
 - 托管：GitHub Pages（GitHub Actions 自动构建部署）
 - 数据库 / 认证：Supabase（PostgreSQL + RLS + 匿名登录）
 - 匹配算法：前端 JavaScript（`src/lib/matching.js`），无需后端
+- 定时通知：GitHub Actions（每 30 分钟）+ QQ/163 邮箱 SMTP（免费、无需域名）
 - 包管理：pnpm（Node ≥ 22.13）
 - 设计文档：[DESIGN.md](./DESIGN.md)
 
@@ -33,6 +35,7 @@
 
 ```
 ├── .github/workflows/deploy-gh-pages.yml  # GitHub Pages 自动部署
+├── .github/workflows/notify.yml          # 换卡邮件通知定时任务（每 30 分钟）
 ├── supabase/
 │   ├── schema.sql                  # 全新安装：建表 + RLS + RPC + 60 张卡 + 一键交换
 │   └── migration_v{2,3,4,5,6}_*.sql  # 已上线数据库的增量迁移（按需执行）
@@ -50,6 +53,7 @@
 │   └── components/                 # 卡牌卡片组件
 └── scripts/
     ├── test-matching.mjs           # 匹配算法测试（pnpm run test:matching）
+    ├── notify.mjs                  # 换卡邮件通知脚本（每 30 分钟，QQ/163 SMTP）
     └── generate_card_images.py     # 生成示例占位图（可不用）
 ```
 
@@ -59,7 +63,7 @@
 
 1. 在 [supabase.com](https://supabase.com) 新建项目。
 2. 打开 **SQL Editor**，把 `supabase/schema.sql` 全部内容粘贴执行（建表 + RLS + RPC + 60 张真实卡牌 + 一键交换）。
-   > 若数据库已有旧数据，请按顺序执行 `migration_v2_cards.sql` → `migration_v3_access_code.sql` → `migration_v4_login_set_code.sql` → `migration_v5_exchange.sql` → `migration_v6_cross_clan_exchange.sql`（跨部落/跨渠道交换）→ `migration_v7_channel.sql`（登录渠道）→ `migration_v8_undo_exchange.sql`（撤销交换）→ `migration_v9_open_account_permission.sql`（开放账号权限修复）→ `migration_v10_notifications.sql`（邮件通知）。
+   > 若数据库已有旧数据，请按顺序执行 `migration_v2_cards.sql` → `migration_v3_access_code.sql` → `migration_v4_login_set_code.sql` → `migration_v5_exchange.sql` → `migration_v6_cross_clan_exchange.sql`（跨部落/跨渠道交换）→ `migration_v7_channel.sql`（登录渠道）→ `migration_v8_undo_exchange.sql`（撤销交换）→ `migration_v9_open_account_permission.sql`（开放账号权限修复）→ `migration_v10_notifications.sql` → `migration_v11_notify_gha.sql`（通知改用 GitHub Actions + QQ/163 SMTP，取代 SendGrid；新库可直接只执行 v11）。
 3. 打开 **Authentication → Sign In / Up**，开启 **Allow anonymous sign-ins**（匿名登录是本项目的身份基础）。
 4. 打开 **Project Settings → API**，复制 `Project URL` 和 `anon public key`。
 
@@ -94,6 +98,40 @@ pnpm build                  # 产物在 dist/
 
 > ⚠️ 环境变量是构建期注入的（`VITE_` 前缀），改配置后重新 push 即可。
 
+## 📧 邮件通知（可选，免费）
+
+不想一直盯着系统？可绑定邮箱开启通知：系统每 30 分钟检查一次换卡匹配，
+当从「没有可交换卡牌」变为「出现可交换卡牌」时，自动发送**一封**邮件提醒
+（不会每张卡发一封；邮箱变更后重新满足条件会再次通知）。
+
+实现方式（无需服务器 / 无需域名 / 完全免费）：
+
+- 定时任务：GitHub Actions（[notify.yml](./.github/workflows/notify.yml)）每 30 分钟运行
+  `scripts/notify.mjs`，读取 Supabase 数据计算匹配并发送邮件；
+- 发信邮箱：用你自己的 **QQ 邮箱 / 163 邮箱** 的 SMTP（授权码），无需注册任何第三方邮件服务。
+
+### 配置步骤
+
+1. **准备邮箱授权码**（以 QQ 邮箱为例）：登录 [mail.qq.com](https://mail.qq.com) →
+   设置 → 账号 → 开启「POP3/SMTP 服务」→ 按提示获取 **16 位授权码**（不是 QQ 密码）。
+   163 邮箱同理（设置 → POP3/SMTP/IMAP → 客户端授权密码）。
+2. **执行数据库迁移**：在 Supabase SQL Editor 执行 `supabase/migration_v11_notify_gha.sql`
+   （若数据库还没执行过 v10，可直接只执行 v11，它包含建表 + RPC；已执行过 v10 的
+   再执行一次 v11 即可停用旧的 SendGrid 定时任务）。
+3. **在 GitHub 仓库添加 Secrets**（Settings → Secrets and variables → Actions）：
+   - `SUPABASE_SERVICE_ROLE_KEY`：Supabase 项目 Settings → API → service_role key
+   - `SMTP_HOST` = `smtp.qq.com`（或 `smtp.163.com`）
+   - `SMTP_PORT` = `465`
+   - `SMTP_USER` = 你的邮箱地址（如 `xxx@qq.com`）
+   - `SMTP_PASS` = 上面的 16 位授权码
+   - `SMTP_FROM` = 发件人地址（一般与 `SMTP_USER` 相同，可省略）
+   （`VITE_SUPABASE_URL` 已在部署时配置，脚本会自动复用。）
+4. 推送代码到 `main`，之后每 30 分钟自动检查一次；也可在 Actions 页面手动运行
+   **Card Exchange Notify** 立即测试（日志会显示发送结果）。
+
+> ⚠️ 小提示：GitHub 的定时任务在仓库**连续 60 天没有任何活动**时会自动暂停，
+> 项目在持续更新则不受影响；暂停后手动运行一次或推一次代码即可恢复。
+
 ## 🖼️ 卡牌图片
 
 - 图片存放在 `public/images/cards/`，文件名 = 数据库 `card_id` + `.png`（`e01`~`e19`、`d01`~`d13`、`b01`~`b11`、`s01`~`s17`，共 60 张）。
@@ -104,7 +142,7 @@ pnpm build                  # 产物在 dist/
 ## ✅ 测试
 
 ```bash
-pnpm run test:matching       # 运行换卡匹配算法单元测试（23 项）
+pnpm run test:matching       # 运行换卡匹配算法单元测试（36 项）
 ```
 
 ## 📊 数据管理
