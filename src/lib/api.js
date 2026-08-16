@@ -90,6 +90,25 @@ export async function updateQuantity(playerId, cardId, quantity) {
  * @param {string} scope 'clan' 仅同部落 | 'channel' 同渠道（区服）
  * @param {string} channel 当前玩家登录渠道：'wechat' | 'qq'
  */
+/**
+ * 分页拉取全部结果。
+ * PostgREST（Supabase）单次查询默认最多返回 1000 行，超出会静默截断，
+ * 导致同渠道等玩家较多时部分库存丢失（表现为"缺 60 张、0 可提供"）。
+ */
+async function fetchAllPages(buildQuery, pageSize = 1000) {
+  const rows = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await buildQuery(from, pageSize);
+    if (error) throw error;
+    const batch = data || [];
+    rows.push(...batch);
+    if (batch.length < pageSize) break;
+    from += pageSize;
+  }
+  return rows;
+}
+
 export async function getClanTradingData(clanId, cardIds, scope = 'clan', channel = 'wechat') {
   if (isDemoMode) return demoApi.getClanTradingData(clanId, cardIds, scope, channel);
   let query = supabase
@@ -97,8 +116,15 @@ export async function getClanTradingData(clanId, cardIds, scope = 'clan', channe
     .select('player_id, game_name, player_tag, keep_base, last_updated_at, clan_id, channel, clans(name)');
   if (scope === 'clan') query = query.eq('clan_id', clanId);
   else if (scope === 'channel') query = query.eq('channel', channel);
-  const { data: players, error: err1 } = await query;
-  if (err1) throw new Error(`读取玩家数据失败：${err1.message}`);
+
+  let players;
+  try {
+    players = await fetchAllPages((from, pageSize) =>
+      query.order('player_id').range(from, from + pageSize - 1)
+    );
+  } catch (err1) {
+    throw new Error(`读取玩家数据失败：${err1.message}`);
+  }
 
   const list = (players || []).map((p) => ({
     player_id: p.player_id,
@@ -114,12 +140,21 @@ export async function getClanTradingData(clanId, cardIds, scope = 'clan', channe
     return { players: list, inventory: [] };
   }
 
-  const { data: inventory, error: err2 } = await supabase
-    .from('player_cards')
-    .select('player_id, card_id, quantity')
-    .in('player_id', list.map((p) => p.player_id))
-    .in('card_id', cardIds);
-  if (err2) throw new Error(`读取成员库存失败：${err2.message}`);
+  let inventory;
+  try {
+    inventory = await fetchAllPages((from, pageSize) =>
+      supabase
+        .from('player_cards')
+        .select('player_id, card_id, quantity')
+        .in('player_id', list.map((p) => p.player_id))
+        .in('card_id', cardIds)
+        .order('player_id')
+        .order('card_id')
+        .range(from, from + pageSize - 1)
+    );
+  } catch (err2) {
+    throw new Error(`读取成员库存失败：${err2.message}`);
+  }
 
   return { players: list, inventory: inventory || [] };
 }
