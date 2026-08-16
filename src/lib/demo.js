@@ -276,6 +276,17 @@ export const demoApi = {
   async getMyExchangeCount(playerId) {
     return state.exchanges.filter((e) => e.player_a === playerId || e.player_b === playerId).length;
   },
+  async getNotificationSettings(playerId) {
+    const s = state.notifySettings?.get(playerId);
+    return s || { player_id: playerId, email: null, enabled: false, scope: 'twoWay' };
+  },
+
+  async setNotificationSettings(playerId, { email, enabled, scope }) {
+    if (!state.notifySettings) state.notifySettings = new Map();
+    const s = { player_id: playerId, email: email || null, enabled: !!enabled, scope: scope || 'twoWay' };
+    state.notifySettings.set(playerId, s);
+    return s;
+  },
   async getExchangeStats() {
     return {
       playerCount: state.players.length,

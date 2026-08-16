@@ -2,13 +2,15 @@
 import { ref, onMounted } from 'vue';
 import { supabase } from './lib/supabase.js';
 import { session, saveSession, loadSession, clearSession } from './lib/store.js';
-import { isDemoMode, getCurrentActivity, getActivityCards, getMyInventory } from './lib/api.js';
+import { isDemoMode, getCurrentActivity, getActivityCards, getMyInventory, getNotificationSettings } from './lib/api.js';
 import LoginView from './views/LoginView.vue';
 import MyCardsView from './views/MyCardsView.vue';
 import TradeView from './views/TradeView.vue';
 import CollectView from './views/CollectView.vue';
+import NotificationSettingsModal from './components/NotificationSettingsModal.vue';
 
 const activeTab = ref('cards');
+const showNotify = ref(false);
 
 async function loadGameData() {
   session.loading = true;
@@ -33,6 +35,17 @@ async function loadGameData() {
   }
 }
 
+async function refreshNotify() {
+  session.player.notify = { email: null, enabled: false, scope: 'twoWay' };
+  if (isDemoMode) return;
+  try {
+    const s = await getNotificationSettings(session.player.player_id);
+    session.player.notify = { email: s.email, enabled: s.enabled, scope: s.scope };
+  } catch {
+    // 读取失败保持默认关闭，不影响使用
+  }
+}
+
 async function restore() {
   if (isDemoMode) return; // 演示模式不做会话恢复
   const saved = loadSession();
@@ -46,14 +59,16 @@ async function restore() {
   session.player = saved.player;
   session.activity = saved.activity ?? null;
   await loadGameData();
+  await refreshNotify();
 }
 
 onMounted(restore);
 
-function onLoggedIn() {
+async function onLoggedIn() {
   saveSession();
   activeTab.value = 'cards';
-  loadGameData();
+  await loadGameData();
+  await refreshNotify();
 }
 
 function logout() {
@@ -69,7 +84,10 @@ function logout() {
       <div class="session-info">
         <span class="who">{{ session.player.clan_name }} · {{ session.player.game_name }}</span>
         <span v-if="session.activity" class="activity-name">{{ session.activity.name }}</span>
-        <button class="btn btn-ghost" @click="logout">退出</button>
+        <button class="btn btn-notify" :class="{ on: session.player?.notify?.enabled }" @click="showNotify = true">
+        {{ session.player?.notify?.enabled ? '🔔 通知开' : '🔕 通知关' }}
+      </button>
+      <button class="btn btn-ghost" @click="logout">退出</button>
       </div>
       <nav class="tabs">
         <button
@@ -106,6 +124,12 @@ function logout() {
         <CollectView v-if="activeTab === 'collect'" />
       </template>
     </main>
+
+        <NotificationSettingsModal
+      v-if="showNotify"
+      @close="showNotify = false"
+      @saved="refreshNotify"
+    />
 
     <footer class="footer">
       <div>仅供部落内部使用</div>

@@ -132,6 +132,15 @@ body {
   padding: 14px 16px;
   overflow-y: auto;
 }
+.btn-notify { font-size: 13px; }
+.btn-notify.on {
+  background: rgba(76, 208, 125, 0.12);
+  border-color: var(--green);
+  color: var(--green);
+  font-weight: 600;
+}
+.modal-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
 
 
 /* ---------- 鎻愮ず鏉?---------- */

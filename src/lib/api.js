@@ -237,6 +237,26 @@ export async function undoExchange(exchangeId) {
   if (error) throw new Error(`撤销失败：${error.message}`);
   return data;
 }
+/** 读取我的通知设置（未设置时返回默认关闭） */
+export async function getNotificationSettings(playerId) {
+  if (isDemoMode) return demoApi.getNotificationSettings(playerId);
+  const { data, error } = await supabase.rpc('get_notification_settings', { p_player_id: playerId });
+  if (error) throw new Error(`读取通知设置失败：${error.message}`);
+  return data;
+}
+
+/** 保存通知设置（开启需填邮箱；scope: 'twoWay' 仅双向 | 'all' 双向+单向） */
+export async function setNotificationSettings(playerId, { email, enabled, scope }) {
+  if (isDemoMode) return demoApi.setNotificationSettings(playerId, { email, enabled, scope });
+  const { data, error } = await supabase.rpc('set_notification_settings', {
+    p_player_id: playerId,
+    p_email: email || null,
+    p_enabled: !!enabled,
+    p_scope: scope || 'twoWay',
+  });
+  if (error) throw new Error(`保存通知设置失败：${error.message}`);
+  return data;
+}
 /** 全站统计：玩家总数 + 成功换卡次数（供登录页/推荐页展示） */
 export async function getExchangeStats() {
   if (isDemoMode) return demoApi.getExchangeStats();
