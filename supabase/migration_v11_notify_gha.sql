@@ -125,7 +125,10 @@ $$;
 -- ---------- 6. 停用旧的 pg_cron 定时任务（v10 的 SendGrid 方案） ----------
 do $$
 begin
-  if exists (select 1 from pg_cron.job where jobname = 'notify-check-30min') then
+  -- pg_cron 的任务表在 cron schema 下（cron.job）；用 to_regnamespace 做防御，
+  -- 即使 pg_cron 未启用也不会报错
+  if to_regnamespace('cron') is not null
+     and exists (select 1 from cron.job where jobname = 'notify-check-30min') then
     perform cron.unschedule('notify-check-30min');
   end if;
 end
