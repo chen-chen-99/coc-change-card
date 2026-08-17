@@ -51,7 +51,7 @@ export function buildRecommendations({ me, clanMembers = [], cards = [], invento
 
   const myNeeds = new Set(missingCards(me).map((c) => c.card_id));
   const mySpareSet = new Set(spareCards(me).map((c) => c.card_id));
-  const others = clanMembers.filter((m) => m.player_id !== me.player_id);
+  const others = clanMembers.filter((m) => m.player_id !== me.player_id && m.matchable !== false);
   const cardById = new Map(cards.map((c) => [c.card_id, c]));
 
   const result = [];
@@ -161,7 +161,7 @@ export function buildCollectRecommendations({ me, clanMembers = [], cards = [], 
   if (mySameCategorySpares.length === 0) return { need, recs: [] };
 
   const providers = clanMembers.filter(
-    (m) => m.player_id !== me.player_id && hasSpare(m, targetCard.card_id)
+    (m) => m.player_id !== me.player_id && m.matchable !== false && hasSpare(m, targetCard.card_id)
   );
 
   const recs = [];

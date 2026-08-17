@@ -55,6 +55,7 @@ create table if not exists public.players (
   access_code     text,                       -- 访问码（可选，用于其他设备换绑）
   keep_base       integer not null default 1, -- 每种卡保留基数，默认 1
   channel         text not null default 'wechat', -- 登录渠道：wechat 微信区 / qq QQ区
+  matchable       boolean not null default true, -- 可被匹配开关（关=不出现在他人推荐中）
   owner_user_id   uuid,                       -- 绑定的 Supabase 匿名用户 ID
   last_updated_at timestamptz not null default now(),
   created_at      timestamptz not null default now(),
@@ -333,6 +334,36 @@ begin
     'access_code_set', (v_player.access_code is not null and v_player.access_code <> ''),
     'editable',        true
   );
+end;
+$$;
+-- =====================================================================
+-- 7.2 切换「可被匹配」开关 RPC（默认开启；关闭后不出现在他人推荐中）
+-- =====================================================================
+create or replace function public.set_matchable(p_player_id uuid, p_matchable boolean)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception '未登录';
+  end if;
+  if not exists (
+    select 1 from public.players p
+    where p.player_id = p_player_id
+      and (p.owner_user_id = v_uid or p.access_code is null or p.access_code = '')
+  ) then
+    raise exception '无权修改该玩家的匹配设置';
+  end if;
+
+  update public.players
+  set matchable = p_matchable, last_updated_at = now()
+  where player_id = p_player_id;
+
+  return jsonb_build_object('player_id', p_player_id, 'matchable', p_matchable);
 end;
 $$;
 -- =====================================================================

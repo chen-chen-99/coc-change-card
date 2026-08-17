@@ -54,7 +54,7 @@ async function main() {
   const cards = await fetchAll((from, size) =>
     supabase.from('cards').select('card_id, name, category').order('card_id').range(from, from + size - 1));
   const players = await fetchAll((from, size) =>
-    supabase.from('players').select('player_id, game_name, player_tag, keep_base, clan_id, channel, last_updated_at')
+    supabase.from('players').select('player_id, game_name, player_tag, keep_base, clan_id, channel, matchable, last_updated_at')
       .order('player_id').range(from, from + size - 1));
   const inventory = await fetchAll((from, size) =>
     supabase.from('player_cards').select('player_id, card_id, quantity')
@@ -95,7 +95,7 @@ async function main() {
     }
     // 匹配范围 = 同渠道（区服）或 同部落，与换卡推荐页一致
     const members = players.filter(
-      (p) => p.player_id !== ns.player_id && (p.channel === me.channel || p.clan_id === me.clan_id)
+      (p) => p.player_id !== ns.player_id && p.matchable !== false && (p.channel === me.channel || p.clan_id === me.clan_id)
     );
     const recs = buildRecommendations({ me, clanMembers: members, cards, inventory });
     const hasTwo = recs.some((r) => r.type === 'twoWay');

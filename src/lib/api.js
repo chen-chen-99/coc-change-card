@@ -113,7 +113,7 @@ export async function getClanTradingData(clanId, cardIds, scope = 'clan', channe
   if (isDemoMode) return demoApi.getClanTradingData(clanId, cardIds, scope, channel);
   let query = supabase
     .from('players')
-    .select('player_id, game_name, player_tag, keep_base, last_updated_at, clan_id, channel, clans(name)');
+    .select('player_id, game_name, player_tag, keep_base, last_updated_at, clan_id, channel, matchable, clans(name)');
   if (scope === 'clan') query = query.eq('clan_id', clanId);
   else if (scope === 'channel') query = query.eq('channel', channel);
 
@@ -135,6 +135,7 @@ export async function getClanTradingData(clanId, cardIds, scope = 'clan', channe
     clan_id: p.clan_id,
     clan_name: p.clans?.name ?? null,
     channel: p.channel ?? 'wechat',
+    matchable: p.matchable !== false,
   }));
   if (!cardIds.length || list.length === 0) {
     return { players: list, inventory: [] };
@@ -255,6 +256,29 @@ export async function setNotificationSettings(playerId, { email, enabled, scope 
     p_scope: scope || 'twoWay',
   });
   if (error) throw new Error(`保存通知设置失败：${error.message}`);
+  return data;
+}
+
+/** 读取玩家「可被匹配」开关状态（默认开启） */
+export async function getMatchable(playerId) {
+  if (isDemoMode) return demoApi.getMatchable(playerId);
+  const { data, error } = await supabase
+    .from('players')
+    .select('matchable')
+    .eq('player_id', playerId)
+    .maybeSingle();
+  if (error) throw new Error(`读取匹配设置失败：${error.message}`);
+  return data?.matchable !== false;
+}
+
+/** 切换「可被匹配」开关（关=不出现在他人换卡推荐/凑卡兑换中） */
+export async function setMatchable(playerId, matchable) {
+  if (isDemoMode) return demoApi.setMatchable(playerId, matchable);
+  const { data, error } = await supabase.rpc('set_matchable', {
+    p_player_id: playerId,
+    p_matchable: !!matchable,
+  });
+  if (error) throw new Error(`切换匹配开关失败：${error.message}`);
   return data;
 }
 /** 全站统计：玩家总数 + 成功换卡次数（供登录页/推荐页展示） */

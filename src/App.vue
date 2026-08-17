@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { supabase } from './lib/supabase.js';
 import { session, saveSession, loadSession, clearSession } from './lib/store.js';
-import { isDemoMode, getCurrentActivity, getActivityCards, getMyInventory, getNotificationSettings } from './lib/api.js';
+import { isDemoMode, getCurrentActivity, getActivityCards, getMyInventory, getNotificationSettings, getMatchable, setMatchable } from './lib/api.js';
 import LoginView from './views/LoginView.vue';
 import MyCardsView from './views/MyCardsView.vue';
 import TradeView from './views/TradeView.vue';
@@ -46,6 +46,29 @@ async function refreshNotify() {
   }
 }
 
+async function refreshMatchable() {
+  session.player.matchable = true;
+  if (isDemoMode) return;
+  try {
+    session.player.matchable = await getMatchable(session.player.player_id);
+  } catch {
+    // 读取失败保持默认开启，不影响使用
+  }
+}
+
+async function toggleMatchable() {
+  const next = !(session.player.matchable !== false);
+  const prev = session.player.matchable;
+  session.player.matchable = next;
+  try {
+    await setMatchable(session.player.player_id, next);
+    saveSession();
+  } catch (e) {
+    session.player.matchable = prev;
+    session.error = e.message;
+  }
+}
+
 async function restore() {
   if (isDemoMode) return; // 演示模式不做会话恢复
   const saved = loadSession();
@@ -60,6 +83,7 @@ async function restore() {
   session.activity = saved.activity ?? null;
   await loadGameData();
   await refreshNotify();
+  await refreshMatchable();
 }
 
 onMounted(restore);
@@ -69,6 +93,7 @@ async function onLoggedIn() {
   activeTab.value = 'cards';
   await loadGameData();
   await refreshNotify();
+  await refreshMatchable();
 }
 
 function logout() {
@@ -87,6 +112,12 @@ function logout() {
         <button class="btn btn-notify" :class="{ on: session.player?.notify?.enabled }" @click="showNotify = true">
         {{ session.player?.notify?.enabled ? '🔔 通知开' : '🔕 通知关' }}
       </button>
+            <button
+        class="btn btn-matchable"
+        :class="{ on: session.player?.matchable !== false }"
+        title="开启后其他成员可在换卡推荐/凑卡兑换中看到你；关闭后你不会被匹配，避免被打扰"
+        @click="toggleMatchable"
+      >{{ session.player?.matchable !== false ? '🤝 可被匹配' : '🙈 暂不匹配' }}</button>
       <button class="btn btn-ghost" @click="logout">退出</button>
       </div>
       <nav class="tabs">

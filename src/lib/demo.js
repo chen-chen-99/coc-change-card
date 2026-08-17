@@ -103,6 +103,7 @@ const state = {
     access_code_set: false,
     editable: false,
     channel: meta.channel ?? 'wechat',
+    matchable: true,
     last_updated_at: '2026-08-13T12:00:00Z',
   })),
   inventory: Object.entries(MEMBER_META).flatMap(([key]) =>
@@ -125,6 +126,7 @@ function ensurePlayer(gameName, playerTag, channel = 'wechat') {
       access_code_set: false,
       editable: true,
       channel,
+      matchable: true,
       last_updated_at: nowIso(),
     };
     state.players.push(p);
@@ -287,6 +289,15 @@ export const demoApi = {
     state.notifySettings.set(playerId, s);
     return s;
   },
+  async getMatchable(playerId) {
+    const p = state.players.find((x) => x.player_id === playerId);
+    return p ? p.matchable !== false : true;
+  },
+  async setMatchable(playerId, matchable) {
+    const p = state.players.find((x) => x.player_id === playerId);
+    if (p) p.matchable = !!matchable;
+    return { player_id: playerId, matchable: !!matchable };
+  },
   async getExchangeStats() {
     return {
       playerCount: state.players.length,
@@ -306,6 +317,7 @@ export const demoApi = {
       clan_id: p.clan_id,
       clan_name: p.clan_name ?? CLAN_NAME,
       channel: p.channel ?? 'wechat',
+      matchable: p.matchable !== false,
     }));
     const inventory = state.inventory.filter((r) => cardIds.includes(r.card_id));
     return { players, inventory };

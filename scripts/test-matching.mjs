@@ -257,5 +257,49 @@ const players = (defs) =>
   });
   assert(res9b.need === 0 && res9b.recs.length === 0, '已凑满 3 张 → 无需推荐');
 }
+// =====================================================================
+// 用例 10：关闭「可被匹配」的玩家不参与匹配
+// =====================================================================
+{
+  console.log('\n用例 10：关闭「可被匹配」的玩家不参与匹配');
+  const makeP = (id, name, matchable) => ({
+    player_id: id, game_name: name, player_tag: null, keep_base: 1,
+    last_updated_at: '2026-08-13T00:00:00Z', matchable,
+  });
+  const me10 = makeP('A', '玩家A', true);
+  const b10 = makeP('B', '小明', true);   // 开启
+  const c10 = makeP('C', '小红', false);  // 关闭
+
+  // 换卡推荐：B、C 都有 A 缺的 c02，但 C 关闭了可被匹配
+  const rows10 = inventory([
+    ['A', 'c01', 3], ['A', 'c02', 0],
+    ['B', 'c01', 0], ['B', 'c02', 2],
+    ['C', 'c01', 0], ['C', 'c02', 2],
+  ]);
+  const recs10 = buildRecommendations({
+    me: me10, clanMembers: [me10, b10, c10], cards, inventory: rows10,
+  });
+  assert(recs10.length === 1, `只有开启者参与匹配，实际 ${recs10.length} 条`);
+  assert(recs10.every((r) => r.partner.gameName === '小明'), '推荐只来自开启者小明');
+  assert(!recs10.some((r) => r.partner.gameName === '小红'), '关闭者小红不应出现');
+
+  // 凑卡兑换同样过滤
+  const cards10 = [
+    { card_id: 'c01', name: '卡牌1', category: 'elixir' },
+    { card_id: 'c02', name: '卡牌2', category: 'elixir' },
+  ];
+  const rows10b = inventory([
+    ['A', 'c01', 1], ['A', 'c02', 3],
+    ['B', 'c01', 2], ['B', 'c02', 0],
+    ['C', 'c01', 2], ['C', 'c02', 0],
+  ]);
+  const res10b = buildCollectRecommendations({
+    me: me10, clanMembers: [me10, b10, c10], cards: cards10, inventory: rows10b,
+    targetCard: cards10[0], targetCount: 3,
+  });
+  assert(res10b.need === 2, `凑卡还差 2 张，实际 ${res10b.need}`);
+  assert(res10b.recs.length === 1 && res10b.recs[0].partner.gameName === '小明', '凑卡兑换只推荐开启者小明');
+  assert(!res10b.recs.some((r) => r.partner.gameName === '小红'), '凑卡兑换中关闭者小红不应出现');
+}
 console.log(`\n结果：${passed} 通过，${failed} 失败`);
 if (failed > 0) process.exit(1);
