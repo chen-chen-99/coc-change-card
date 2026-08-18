@@ -2,16 +2,57 @@
 import { ref, onMounted } from 'vue';
 import { supabase } from './lib/supabase.js';
 import { session, saveSession, loadSession, clearSession } from './lib/store.js';
-import { isDemoMode, getCurrentActivity, getActivityCards, getMyInventory, getNotificationSettings, getMatchable, setMatchable } from './lib/api.js';
+import { isDemoMode, getCurrentActivity, getActivityCards, getMyInventory, getNotificationSettings, getMatchable, setMatchable, getPlayerBanned } from './lib/api.js';
 import { DEVELOPER } from './lib/site.js';
 import LoginView from './views/LoginView.vue';
 import MyCardsView from './views/MyCardsView.vue';
 import TradeView from './views/TradeView.vue';
 import CollectView from './views/CollectView.vue';
 import NotificationSettingsModal from './components/NotificationSettingsModal.vue';
+import BannedModal from './components/BannedModal.vue';
 
 const activeTab = ref('cards');
 const showNotify = ref(false);
+
+const banned = ref(false);
+let banTimer = null;
+
+/** 检测当前玩家是否被管理员禁用；被禁用则弹窗并停止使用 */
+async function checkBanned() {
+  if (isDemoMode || !session.player) return false;
+  try {
+    const b = await getPlayerBanned(session.player.player_id);
+    if (b) {
+      banned.value = true;
+      stopBanTimer();
+      return true;
+    }
+  } catch {
+    // 网络/临时错误不误判，保持现状
+  }
+  return false;
+}
+
+/** 登录期间每 60 秒复查一次，管理员中途禁用也能及时踢出 */
+function startBanTimer() {
+  stopBanTimer();
+  banTimer = setInterval(async () => {
+    if (await checkBanned()) stopBanTimer();
+  }, 60 * 1000);
+}
+
+function stopBanTimer() {
+  if (banTimer) {
+    clearInterval(banTimer);
+    banTimer = null;
+  }
+}
+
+function forceLogout() {
+  banned.value = false;
+  stopBanTimer();
+  logout();
+}
 
 async function loadGameData() {
   session.loading = true;
@@ -82,6 +123,8 @@ async function restore() {
   session.user = data.user;
   session.player = saved.player;
   session.activity = saved.activity ?? null;
+  if (await checkBanned()) return; // 被禁用：弹窗提示并强制退出，不加载数据
+  startBanTimer();
   await loadGameData();
   await refreshNotify();
   await refreshMatchable();
@@ -92,12 +135,16 @@ onMounted(restore);
 async function onLoggedIn() {
   saveSession();
   activeTab.value = 'cards';
+  if (await checkBanned()) return; // 被禁用：弹窗提示并强制退出
+  startBanTimer();
   await loadGameData();
   await refreshNotify();
   await refreshMatchable();
 }
 
 function logout() {
+  stopBanTimer();
+  banned.value = false;
   if (!isDemoMode) supabase.auth.signOut().catch(() => {});
   clearSession();
 }
@@ -156,6 +203,8 @@ function logout() {
         <CollectView v-if="activeTab === 'collect'" />
       </template>
     </main>
+
+        <BannedModal v-if="banned" @close="forceLogout" />
 
         <NotificationSettingsModal
       v-if="showNotify"

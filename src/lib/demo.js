@@ -289,6 +289,10 @@ export const demoApi = {
     state.notifySettings.set(playerId, s);
     return s;
   },
+  async getPlayerBanned(playerId) {
+    const p = state.players.find((x) => x.player_id === playerId);
+    return p ? p.banned === true : false;
+  },
   async getMatchable(playerId) {
     const p = state.players.find((x) => x.player_id === playerId);
     return p ? p.matchable !== false : true;

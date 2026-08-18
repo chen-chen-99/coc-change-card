@@ -271,6 +271,17 @@ export async function getMatchable(playerId) {
   return data?.matchable !== false;
 }
 
+/** 读取玩家是否被管理员禁用 */
+export async function getPlayerBanned(playerId) {
+  if (isDemoMode) return demoApi.getPlayerBanned(playerId);
+  const { data, error } = await supabase
+    .from('players')
+    .select('banned')
+    .eq('player_id', playerId)
+    .maybeSingle();
+  if (error) throw new Error(`读取账号状态失败：${error.message}`);
+  return data?.banned === true;
+}
 /** 切换「可被匹配」开关（关=不出现在他人换卡推荐/凑卡兑换中） */
 export async function setMatchable(playerId, matchable) {
   if (isDemoMode) return demoApi.setMatchable(playerId, matchable);
