@@ -2,9 +2,12 @@
 import { ref } from 'vue';
 
 const qrErrors = ref({ qq: false, wechat: false });
+// 用 BASE_URL 拼相对路径，兼容 GitHub Pages 子路径部署
+const base = import.meta.env.BASE_URL;
+const qrImg = (name) => base + 'images/qrcodes/' + name;
 const GROUPS = [
-  { key: 'qq', label: '🐧 QQ群', img: '/images/qrcodes/qq-group.png' },
-  { key: 'wechat', label: '💬 微信群', img: '/images/qrcodes/wechat-group.png' },
+  { key: 'qq', label: '🐧 QQ群', img: qrImg('qq-group.png') },
+  { key: 'wechat', label: '💬 微信群', img: qrImg('wechat-group.png') },
 ];
 function onError(key) {
   qrErrors.value[key] = true;
