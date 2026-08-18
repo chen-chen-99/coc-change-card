@@ -173,11 +173,11 @@ onMounted(load);
           @click="setScope('channel')"
         >🔗 同渠道</button>
       </div>
-      <span v-if="scope === 'channel'" class="scope-hint">同渠道（区服）内可跨部落匹配，已显示各自部落名</span>
+      <span v-if="scope === 'channel'" class="scope-hint">同渠道内可跨部落匹配</span>
     </div>
 
     <div class="banner rule-hint">
-      📌 <b>同部落 或 同渠道（区服）</b>的玩家才能互相换卡；只推荐<b>可交换</b>组合：<b>双向互补</b>或<b>单方交换</b>（任选一张<b>同种类</b>多余卡）。只有<b>同种类</b>的卡牌才能互相交换。
+      📌 只推荐<b>可交换</b>组合：<b>双向互补</b> 或 <b>单方交换</b>（需<b>同种类</b>卡）。
     </div>
 
     <div v-if="notice" class="banner success">{{ notice }}</div>
@@ -235,7 +235,7 @@ onMounted(load);
               <div class="flow-line">{{ rec.partner.gameName }} → 你：{{ rec.iGet.name }}</div>
             </div>
             <div class="rec-badge oneWay">🔁 单方交换</div>
-            <div class="rec-hint">💡 对方暂不需要你的卡，任选一张你多余的<b>同种类</b>卡即可交换</div>
+            <div class="rec-hint">💡 任选一张你多余的<b>同种类</b>卡即可交换</div>
             <div class="rec-give-pick">
               <span class="give-pick-label">你给（任选一张同种类多余卡）：</span>
               <select v-model="selectedGive[swapKeyOf(rec)]" class="give-pick-select">

@@ -32,5 +32,6 @@ function onError(key) {
         <div v-else class="group-qr-fallback">二维码待上传，请联系开发者获取</div>
       </div>
     </div>
+    <p class="group-join-save-hint">💡 长按（手机）或右键（电脑）二维码图片，可保存到本地后再扫码进群。</p>
   </div>
 </template>

@@ -51,8 +51,7 @@ async function save(enabled) {
 
       <div class="modal-body">
         <p class="field-hint">
-          系统每 30 分钟检查一次你的换卡匹配。当从「没有可交换卡牌」变为「出现可交换卡牌」时，会发送
-          <b>一封</b>邮件通知你（不会每张卡发一封）。具体内容登录系统即可查看。
+          每 30 分钟检查一次，出现可交换卡牌时发送<b>一封</b>邮件提醒。
         </p>
 
         <div v-if="notice" class="banner success">{{ notice }}</div>
@@ -78,7 +77,7 @@ async function save(enabled) {
             >双向 + 单向</button>
           </div>
           <small class="field-hint">
-            {{ scope === 'twoWay' ? '只在你与对方能双向互补（各缺一张对方有的卡）时通知。' : '双向或单向（对方有你缺的卡、你可用同种类多余卡换）都会通知。' }}
+            {{ scope === 'twoWay' ? '仅双向互补时通知' : '双向、单向都会通知' }}
           </small>
         </div>
 

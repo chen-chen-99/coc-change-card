@@ -602,3 +602,19 @@ body {
 }
 .access-status { color: var(--text-dim); }
 .access-status.locked { color: var(--gold); }
+/* ---------- 加群提示：登录页链接 + 保存提示 ---------- */
+.group-join-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  background: rgba(242, 193, 78, 0.08);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  margin: 0 0 14px;
+}
+.group-join-link:hover { filter: brightness(1.15); }
+.group-join-save-hint { font-size: 12px; color: var(--text-dim); margin: 8px 0 0; text-align: center; line-height: 1.5; }

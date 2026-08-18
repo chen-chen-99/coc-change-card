@@ -2,7 +2,6 @@
 import { ref, watch, onMounted } from 'vue';
 import { session } from '../lib/store.js';
 import { signInAnonymously, loginPlayer, getExchangeStats } from '../lib/api.js';
-import GroupJoinCard from '../components/GroupJoinCard.vue';
 import GroupJoinModal from '../components/GroupJoinModal.vue';
 
 const emit = defineEmits(['logged-in']);
@@ -89,7 +88,7 @@ async function submit() {
     <p class="subtitle">只需填写玩家名称，进入你的卡牌管理页</p>
     <p v-if="stats" class="stats-line">👥 已有 {{ stats.playerCount }} 位成员 · 🏆 累计成功换卡 {{ stats.exchangeCount }} 次</p>
 
-    <GroupJoinCard />
+    <button class="group-join-link" @click="showGroupModal = true">📢 使用前请先加入对应渠道的群</button>
 
     <form class="form" @submit.prevent="submit">
       <label class="field">
@@ -103,7 +102,7 @@ async function submit() {
             @click="channel = c.key"
           >{{ c.label }}</button>
         </div>
-        <small class="field-hint">同部落或同渠道（区服）的玩家才能互相换卡；此处仅影响换卡匹配，不影响账号识别。</small>
+        <small class="field-hint">同渠道或同部落才能互相换卡。</small>
       </label>
 
       <label class="field">
@@ -115,11 +114,11 @@ async function submit() {
         <input v-model.trim="playerName" placeholder="例如：小明" required />
       </label>
       <label class="field">
-        <span>玩家标签（可选，推荐填写，用于区分同名玩家）</span>
+        <span>玩家标签（可选）</span>
         <input v-model.trim="playerTag" placeholder="例如：#ABC123" />
       </label>
       <label class="field">
-        <span>访问码（可选）— 仅当该玩家已设置访问码且你非绑定设备时需要填写，填对即可接管编辑权</span>
+        <span>访问码（可选，已设置时需填写）</span>
         <input v-model.trim="accessCode" type="password" placeholder="未设置访问码则留空" />
       </label>
 
@@ -128,7 +127,6 @@ async function submit() {
       <button class="btn btn-primary btn-block" type="submit" :disabled="submitting">
         {{ submitting ? '进入中…' : '进入' }}
       </button>
-      <p class="hint">首次进入将自动创建你的玩家档案并初始化卡牌库存。</p>
     </form>
   </section>
 

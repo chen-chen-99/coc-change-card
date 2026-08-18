@@ -155,7 +155,7 @@ async function onSwap(rec) {
     </div>
 
     <div class="banner rule-hint">
-      🎯 想用「两张多余卡」找游戏系统兑换任意卡？先在这里凑齐目标张数。选择你想凑的卡，系统自动匹配有多余这张卡的人，<b>优先推荐对方也缺你能给的卡</b>的组合。
+      🎯 先凑齐目标张数，再用多余的卡去游戏内兑换任意卡；优先推荐<b>对方也缺你能给的卡</b>的组合。
     </div>
 
     <div class="scope-row">
@@ -222,8 +222,7 @@ async function onSwap(rec) {
       <div v-if="need <= 0" class="banner success">🎉 已达目标张数，无需再换！</div>
       <div v-else-if="recs.length === 0" class="banner">
         <template v-if="targetCard && !recs.length && need > 0">
-          暂无可匹配的对象：游戏发起换卡需<b>至少一方缺卡</b>，因此需要对方<b>缺少你有的同种类卡</b>才能换。
-          可先去「我的卡牌」积累同种类多余卡，或等更多人录入数据后刷新。
+          暂无可匹配对象：需对方<b>缺少你能给的同种类卡</b>才能换。可先去「我的卡牌」攒卡后刷新。
         </template>
       </div>
 
