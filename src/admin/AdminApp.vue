@@ -15,8 +15,6 @@ const stats = ref(null);
 const players = ref([]);
 const clans = ref([]);
 const channelMatch = ref(null);
-const intlCount = computed(() => players.value.filter((p) => p.channel === 'intl').length);
-const intlMatchableCount = computed(() => players.value.filter((p) => p.channel === 'intl' && p.matchable !== false).length);
 const search = ref('');
 
 const CHANNEL_LABEL = { wechat: '💬 微信区', qq: '🐧 QQ区', intl: '🌍 国际服' };
@@ -240,8 +238,6 @@ onMounted(() => {});
           <div class="stat-card danger"><div class="stat-num">{{ stats.banned }}</div><div class="stat-label">已禁用</div></div>
           <div class="stat-card"><div class="stat-num">{{ stats.channel_wechat }}</div><div class="stat-label">微信区人数</div></div>
           <div class="stat-card"><div class="stat-num">{{ stats.channel_qq }}</div><div class="stat-label">QQ区人数</div></div>
-          <div class="stat-card"><div class="stat-num">{{ stats.channel_intl ?? intlCount }}</div><div class="stat-label">国际服人数</div></div>
-          <div class="stat-card"><div class="stat-num">{{ stats.matchable_intl ?? intlMatchableCount }}</div><div class="stat-label">国际服可匹配</div></div>
         </div>
 
         <h3 class="panel-title">各渠道匹配状态（按「可被匹配」用户实时计算）</h3>
