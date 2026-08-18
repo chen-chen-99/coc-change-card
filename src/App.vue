@@ -164,6 +164,7 @@ function logout() {
 
     <footer class="footer">
       <div>仅供部落内部使用</div>
+      <div class="contact">💬 联系开发者：QQ 1456734671 · 部落号 #29UL9PRJR</div>
       <div class="disclaimer">
         此非官方作品，未获得Supercell认可。更多信息，请参阅
         <a href="https://supercell.com/en/fan-content-policy/cn/" target="_blank" rel="noopener noreferrer">Supercell 玩家内容条款</a>。

@@ -85,6 +85,44 @@ body {
   color: var(--blue);
   text-decoration: underline;
 }
+.footer .contact { margin-top: 6px; line-height: 1.6; }
+
+/* ---------- 加群提示 ---------- */
+.group-join {
+  border: 1px solid var(--gold);
+  background: rgba(242, 193, 78, 0.06);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.group-join-title { font-weight: 700; color: var(--gold); margin-bottom: 6px; }
+.group-join-hint { font-size: 13px; color: var(--text-dim); line-height: 1.6; margin: 0 0 10px; }
+.group-qr-list { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+.group-qr-item { text-align: center; }
+.group-qr-label { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.group-qr-img {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+  padding: 4px;
+  border: 1px solid var(--border);
+}
+.group-qr-fallback {
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-size: 12px;
+  text-align: center;
+  padding: 8px;
+  box-sizing: border-box;
+}
 .section-head {
   display: flex;
   align-items: center;

@@ -2,6 +2,8 @@
 import { ref, watch, onMounted } from 'vue';
 import { session } from '../lib/store.js';
 import { signInAnonymously, loginPlayer, getExchangeStats } from '../lib/api.js';
+import GroupJoinCard from '../components/GroupJoinCard.vue';
+import GroupJoinModal from '../components/GroupJoinModal.vue';
 
 const emit = defineEmits(['logged-in']);
 
@@ -33,11 +35,22 @@ watch([clanName, playerName, playerTag, channel], ([c, p, t, ch]) => {
 const accessCode = ref('');
 const stats = ref(null);
 
+// 首次使用弹窗：提示先加对应渠道的群（记住已看过）
+const GROUP_NOTICE_KEY = 'card_clash_group_notice_shown';
+const showGroupModal = ref(false);
+function closeGroupModal() {
+  localStorage.setItem(GROUP_NOTICE_KEY, '1');
+  showGroupModal.value = false;
+}
+
 onMounted(async () => {
   try {
     stats.value = await getExchangeStats();
   } catch {
     // 统计加载失败不影响登录
+  }
+  if (!localStorage.getItem(GROUP_NOTICE_KEY)) {
+    showGroupModal.value = true;
   }
 });
 const submitting = ref(false);
@@ -75,6 +88,8 @@ async function submit() {
     <h1>🏰 卡牌冲突换卡助手</h1>
     <p class="subtitle">只需填写玩家名称，进入你的卡牌管理页</p>
     <p v-if="stats" class="stats-line">👥 已有 {{ stats.playerCount }} 位成员 · 🏆 累计成功换卡 {{ stats.exchangeCount }} 次</p>
+
+    <GroupJoinCard />
 
     <form class="form" @submit.prevent="submit">
       <label class="field">
@@ -116,4 +131,6 @@ async function submit() {
       <p class="hint">首次进入将自动创建你的玩家档案并初始化卡牌库存。</p>
     </form>
   </section>
+
+  <GroupJoinModal v-if="showGroupModal" @close="closeGroupModal" />
 </template>
