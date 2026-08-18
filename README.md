@@ -21,6 +21,7 @@
 - **邮件通知**：顶部 🔔 按钮可绑定邮箱并开启通知（可选：仅双向 / 双向+单向）；系统每 30 分钟检查一次，当「从没有可交换卡牌 → 出现可交换卡牌」时自动发送**一封**邮件提醒，无需一直盯着系统。
 - **加群提示**：首次使用自动弹窗，后续登录页保留「使用前请先加入对应渠道的群」入口可再次查看；二维码放 `public/images/qrcodes/`（`qq-group.png` / `wechat-group.png`，命名规则见其中 README.md）。
 - **联系开发者**：页脚展示开发者联系方式（QQ 1456734671 · 部落号 #29UL9PRJR）。
+- **后台管理（本地）**：独立的 `/admin.html` 管理页，可查看全站统计与各渠道匹配状态、管理用户（禁用/启用/删除）、删除部落；禁用用户登录时会提示「先加群 / 联系开发者」。所有操作需管理员口令（存于数据库 `app_config.admin_code`）。
 - **页脚免责声明**：已展示 Supercell 玩家内容条款声明（使用官方素材合规）。
 
 ## 🧱 技术栈
@@ -45,6 +46,7 @@
 ├── public/images/cards/            # 60 张官方兵种立绘（命名规则见其中 README.md）
 ├── public/images/qrcodes/          # 加群二维码（qq-group.png / wechat-group.png，命名规则见其中 README.md）
 ├── docs/card-image-prompt.md       # 卡牌图片获取提示词（Wiki 页面对照）
+├── admin.html                      # 后台管理入口（本地使用）
 ├── src/
 │   ├── lib/
 │   │   ├── supabase.js             # Supabase 客户端
@@ -67,7 +69,7 @@
 
 1. 在 [supabase.com](https://supabase.com) 新建项目。
 2. 打开 **SQL Editor**，把 `supabase/schema.sql` 全部内容粘贴执行（建表 + RLS + RPC + 60 张真实卡牌 + 一键交换）。
-   > 若数据库已有旧数据，请按顺序执行 `migration_v2_cards.sql` → `migration_v3_access_code.sql` → `migration_v4_login_set_code.sql` → `migration_v5_exchange.sql` → `migration_v6_cross_clan_exchange.sql`（跨部落/跨渠道交换）→ `migration_v7_channel.sql`（登录渠道）→ `migration_v8_undo_exchange.sql`（撤销交换）→ `migration_v9_open_account_permission.sql`（开放账号权限修复）→ `migration_v10_notifications.sql` → `migration_v11_notify_gha.sql`（通知改用 GitHub Actions + QQ/163 SMTP，取代 SendGrid；新库可直接只执行 v11）。
+   > 若数据库已有旧数据，请按顺序执行 `migration_v2_cards.sql` → `migration_v3_access_code.sql` → `migration_v4_login_set_code.sql` → `migration_v5_exchange.sql` → `migration_v6_cross_clan_exchange.sql`（跨部落/跨渠道交换）→ `migration_v7_channel.sql`（登录渠道）→ `migration_v8_undo_exchange.sql`（撤销交换）→ `migration_v9_open_account_permission.sql`（开放账号权限修复）→ `migration_v10_notifications.sql` → `migration_v11_notify_gha.sql`（通知改用 GitHub Actions + QQ/163 SMTP，取代 SendGrid；新库可直接只执行 v11）→ `migration_v12_matchable.sql`（可被匹配开关）→ `migration_v13_admin.sql`（后台管理）。
 3. 打开 **Authentication → Sign In / Up**，开启 **Allow anonymous sign-ins**（匿名登录是本项目的身份基础）。
 4. 打开 **Project Settings → API**，复制 `Project URL` 和 `anon public key`。
 
@@ -136,6 +138,37 @@ pnpm build                  # 产物在 dist/
 > ⚠️ 小提示：GitHub 的定时任务在仓库**连续 60 天没有任何活动**时会自动暂停，
 > 项目在持续更新则不受影响；暂停后手动运行一次或推一次代码即可恢复。
 
+## 🔐 后台管理（本地使用）
+
+独立的 `admin.html` 管理页，用于了解系统使用状态与管理用户。
+
+### 功能
+
+- **概览**：玩家数 / 部落数 / 成功换卡 / 已禁用数，以及**各渠道（微信区 / QQ区）当前是否有可匹配数据**（按「可被匹配」用户实时计算，含双向/单向组合数）；
+- **用户管理**：搜索玩家，查看已录入卡牌数、数据行数、最后登录时间、最后更新时间；支持**禁用 / 启用**、**删除**用户；
+- **部落管理**：查看部落与成员数，支持**删除部落**（连同其全部玩家数据）；
+- **禁用提示**：被禁用的用户登录时会看到提示「使用前请先加入对应渠道的群，或联系开发者」，且无法修改库存 / 交换。
+
+### 启用步骤
+
+1. 在 Supabase SQL Editor 执行 `supabase/migration_v13_admin.sql`（新增 `banned` / `last_login_at` 列、登录拦截、后台 RPC，并生成默认管理员口令）。
+2. **务必修改管理员口令**：执行
+   ```sql
+   update public.app_config set value = '你的新口令' where key = 'admin_code';
+   ```
+3. 本地启动（见下方），打开 **http://localhost:5173/admin.html**，输入口令进入后台。
+
+### 本地启动
+
+```bash
+pnpm install
+pnpm dev
+```
+
+- 前台：http://localhost:5173/
+- 后台管理：http://localhost:5173/admin.html
+
+> ⚠️ 安全提示：`admin.html` 也会随 GitHub Pages 一起部署到公网，但所有操作都要求管理员口令（口令存数据库、由服务端 RPC 校验，前端不落盘），请务必把默认口令改成你自己的，且不要泄露口令。
 ## 🖼️ 卡牌图片
 
 - 图片存放在 `public/images/cards/`，文件名 = 数据库 `card_id` + `.png`（`e01`~`e19`、`d01`~`d13`、`b01`~`b11`、`s01`~`s17`，共 60 张）。
