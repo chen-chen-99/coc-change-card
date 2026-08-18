@@ -297,18 +297,17 @@ onMounted(() => {});
         <div class="table-wrap">
           <table class="admin-table">
             <thead>
-              <tr><th>部落名称</th><th>成员数</th><th>创建时间</th><th>操作</th></tr>
+              <tr><th>部落名称</th><th>成员数</th><th>操作</th></tr>
             </thead>
             <tbody>
               <tr v-for="c in clans" :key="c.clan_id">
                 <td>{{ c.name }}</td>
                 <td>{{ c.member_count }}</td>
-                <td>{{ fmt(c.created_at) }}</td>
                 <td class="cell-actions">
                   <button class="btn btn-sm btn-danger" :disabled="busy" @click="removeClan(c)">删除部落</button>
                 </td>
               </tr>
-              <tr v-if="clans.length === 0"><td colspan="4" class="empty">暂无数据</td></tr>
+              <tr v-if="clans.length === 0"><td colspan="3" class="empty">暂无数据</td></tr>
             </tbody>
           </table>
         </div>

@@ -1454,7 +1454,7 @@ $$;
 
 -- 8.4 部落列表
 create or replace function public.admin_list_clans(p_admin_code text)
-returns table(clan_id uuid, name text, member_count bigint, created_at timestamptz)
+returns table(clan_id uuid, name text, member_count bigint)
 language plpgsql
 security definer
 set search_path = public
@@ -1462,11 +1462,11 @@ as $$
 begin
   perform public.admin_check_code(p_admin_code);
   return query
-    select c.clan_id, c.name, count(p.player_id)::bigint, c.created_at
+    select c.clan_id, c.name, count(p.player_id)::bigint
     from public.clans c
     left join public.players p on p.clan_id = c.clan_id
     group by c.clan_id
-    order by c.created_at asc;
+    order by c.name asc;
 end;
 $$;
 
