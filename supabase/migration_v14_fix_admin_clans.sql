@@ -2,8 +2,12 @@
 -- 迁移 v14：修复 admin_list_clans（clans 表没有 created_at 列）
 -- ---------------------------------------------------------------------
 -- 已执行 v13 的数据库执行本迁移即可修复后台「部落管理」报错。
+-- 因为返回类型从 4 列改为 3 列，Postgres 不允许 create or replace
+-- 修改返回类型，必须先 DROP 再重建。
 -- 在 Supabase SQL Editor 中整体执行即可（可重复执行）。
 -- =====================================================================
+
+drop function if exists public.admin_list_clans(text);
 -- 8.4 部落列表
 create or replace function public.admin_list_clans(p_admin_code text)
 returns table(clan_id uuid, name text, member_count bigint)
