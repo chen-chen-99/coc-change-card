@@ -16,6 +16,7 @@ const players = ref([]);
 const clans = ref([]);
 const channelMatch = ref(null);
 const intlCount = computed(() => players.value.filter((p) => p.channel === 'intl').length);
+const intlMatchableCount = computed(() => players.value.filter((p) => p.channel === 'intl' && p.matchable !== false).length);
 const search = ref('');
 
 const CHANNEL_LABEL = { wechat: '💬 微信区', qq: '🐧 QQ区', intl: '🌍 国际服' };
@@ -142,6 +143,20 @@ async function toggleBanned(p) {
   }
 }
 
+async function toggleMatchable(p) {
+  const next = p.matchable !== false ? false : true;
+  busy.value = true;
+  try {
+    await adminApi.setMatchable(code.value, p.player_id, next);
+    p.matchable = next;
+    notice.value = `已将「${p.game_name}」${next ? '开启' : '关闭'}可被匹配`;
+    await Promise.all([refreshStatsOnly(), computeChannelMatches()]);
+  } catch (e) {
+    error.value = e.message;
+  } finally {
+    busy.value = false;
+  }
+}
 async function removePlayer(p) {
   if (!window.confirm(`确定要删除用户「${p.game_name}」吗？\n将同时删除其库存、换卡记录与通知设置，且不可恢复！`)) return;
   busy.value = true;
@@ -225,7 +240,8 @@ onMounted(() => {});
           <div class="stat-card danger"><div class="stat-num">{{ stats.banned }}</div><div class="stat-label">已禁用</div></div>
           <div class="stat-card"><div class="stat-num">{{ stats.channel_wechat }}</div><div class="stat-label">微信区人数</div></div>
           <div class="stat-card"><div class="stat-num">{{ stats.channel_qq }}</div><div class="stat-label">QQ区人数</div></div>
-          <div class="stat-card"><div class="stat-num">{{ intlCount }}</div><div class="stat-label">国际服人数</div></div>
+          <div class="stat-card"><div class="stat-num">{{ stats.channel_intl ?? intlCount }}</div><div class="stat-label">国际服人数</div></div>
+          <div class="stat-card"><div class="stat-num">{{ stats.matchable_intl ?? intlMatchableCount }}</div><div class="stat-label">国际服可匹配</div></div>
         </div>
 
         <h3 class="panel-title">各渠道匹配状态（按「可被匹配」用户实时计算）</h3>
@@ -282,6 +298,9 @@ onMounted(() => {});
                   <span v-if="p.matchable === false" class="badge muted">不匹配</span>
                 </td>
                 <td class="cell-actions">
+                  <button class="btn btn-sm" :disabled="busy" @click="toggleMatchable(p)">
+                    {{ p.matchable !== false ? '屏蔽匹配' : '开启匹配' }}
+                  </button>
                   <button class="btn btn-sm" :disabled="busy" @click="toggleBanned(p)">
                     {{ p.banned ? '启用' : '禁用' }}
                   </button>

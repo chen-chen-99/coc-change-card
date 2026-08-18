@@ -35,6 +35,8 @@ export const adminApi = {
   stats: (code) => rpc('admin_stats', { p_admin_code: code }),
   listPlayers: (code) => rpc('admin_list_players', { p_admin_code: code }),
   listClans: (code) => rpc('admin_list_clans', { p_admin_code: code }),
+  setMatchable: (code, playerId, matchable) =>
+    rpc('admin_set_matchable', { p_admin_code: code, p_player_id: playerId, p_matchable: matchable }),
   setBanned: (code, playerId, banned) =>
     rpc('admin_set_banned', { p_admin_code: code, p_player_id: playerId, p_banned: banned }),
   deletePlayer: (code, playerId) =>
