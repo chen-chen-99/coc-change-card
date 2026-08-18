@@ -95,7 +95,12 @@ async function main() {
     }
     // 匹配范围 = 同渠道（区服）或 同部落，与换卡推荐页一致
     const members = players.filter(
-      (p) => p.player_id !== ns.player_id && p.matchable !== false && (p.channel === me.channel || p.clan_id === me.clan_id)
+      (p) =>
+      p.player_id !== ns.player_id &&
+      p.matchable !== false &&
+      // 国服与国际服互不匹配
+      (p.channel === 'intl') === (me.channel === 'intl') &&
+      (p.channel === me.channel || p.clan_id === me.clan_id)
     );
     const recs = buildRecommendations({ me, clanMembers: members, cards, inventory });
     const hasTwo = recs.some((r) => r.type === 'twoWay');

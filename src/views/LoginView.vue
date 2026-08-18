@@ -6,9 +6,14 @@ import GroupJoinModal from '../components/GroupJoinModal.vue';
 
 const emit = defineEmits(['logged-in']);
 
-// 记住上次输入（localStorage），部落默认填"城紫金"、渠道默认微信区
+// 记住上次输入（localStorage），部落默认填"城紫金"、服务器默认国服、渠道默认微信区
 const DEFAULT_CLAN = '城紫金';
+const DEFAULT_SERVER = 'cn'; // cn 国服 | intl 国际服
 const DEFAULT_CHANNEL = 'wechat';
+const SERVERS = [
+  { key: 'cn', label: '🇨🇳 国服' },
+  { key: 'intl', label: '🌍 国际服' },
+];
 const CHANNELS = [
   { key: 'wechat', label: '💬 微信区' },
   { key: 'qq', label: '🐧 QQ区' },
@@ -17,18 +22,22 @@ const KEYS = {
   clan: 'card_clash_clan_name',
   player: 'card_clash_player_name',
   tag: 'card_clash_player_tag',
+  server: 'card_clash_server',
   channel: 'card_clash_channel',
 };
 
 const clanName = ref(localStorage.getItem(KEYS.clan) || DEFAULT_CLAN);
 const playerName = ref(localStorage.getItem(KEYS.player) || '');
 const playerTag = ref(localStorage.getItem(KEYS.tag) || '');
+const savedServer = localStorage.getItem(KEYS.server);
+const server = ref(savedServer === 'intl' ? 'intl' : DEFAULT_SERVER);
 const savedChannel = localStorage.getItem(KEYS.channel);
 const channel = ref(savedChannel === 'qq' || savedChannel === 'wechat' ? savedChannel : DEFAULT_CHANNEL);
-watch([clanName, playerName, playerTag, channel], ([c, p, t, ch]) => {
+watch([clanName, playerName, playerTag, server, channel], ([c, p, t, s, ch]) => {
   localStorage.setItem(KEYS.clan, c);
   localStorage.setItem(KEYS.player, p);
   localStorage.setItem(KEYS.tag, t);
+  localStorage.setItem(KEYS.server, s);
   localStorage.setItem(KEYS.channel, ch);
 });
 const accessCode = ref('');
@@ -69,7 +78,7 @@ async function submit() {
       playerName: playerName.value.trim(),
       playerTag: playerTag.value.trim(),
       accessCode: accessCode.value.trim(),
-      channel: channel.value,
+      channel: server.value === 'intl' ? 'intl' : channel.value,
     });
     session.user = user;
     session.player = player;
@@ -92,6 +101,20 @@ async function submit() {
 
     <form class="form" @submit.prevent="submit">
       <label class="field">
+        <span>服务器</span>
+        <div class="channel-seg">
+          <button
+            v-for="s in SERVERS"
+            :key="s.key"
+            type="button"
+            :class="['scope-btn', { active: server === s.key }]"
+            @click="server = s.key"
+          >{{ s.label }}</button>
+        </div>
+        <small class="field-hint">国服与国际服互不匹配。</small>
+      </label>
+
+      <label v-if="server === 'cn'" class="field">
         <span>登录渠道（区服）</span>
         <div class="channel-seg">
           <button
@@ -104,6 +127,7 @@ async function submit() {
         </div>
         <small class="field-hint">同渠道或同部落才能互相换卡。</small>
       </label>
+      <p v-else class="field-hint" style="margin:0;">🌍 国际服不区分微信/QQ，可匹配所有国际服玩家。</p>
 
       <label class="field">
         <span>部落名称</span>

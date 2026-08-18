@@ -137,8 +137,15 @@ export async function getClanTradingData(clanId, cardIds, scope = 'clan', channe
     channel: p.channel ?? 'wechat',
     matchable: p.matchable !== false,
   }));
-  if (!cardIds.length || list.length === 0) {
-    return { players: list, inventory: [] };
+  // 国服与国际服互不匹配：即使同部落，也按服务器隔离
+  let scoped = list;
+  if (scope === 'clan') {
+    const isIntl = channel === 'intl';
+    scoped = list.filter((p) => (p.channel === 'intl') === isIntl);
+  }
+
+  if (!cardIds.length || scoped.length === 0) {
+    return { players: scoped, inventory: [] };
   }
 
   let inventory;
@@ -147,7 +154,7 @@ export async function getClanTradingData(clanId, cardIds, scope = 'clan', channe
       supabase
         .from('player_cards')
         .select('player_id, card_id, quantity')
-        .in('player_id', list.map((p) => p.player_id))
+        .in('player_id', scoped.map((p) => p.player_id))
         .in('card_id', cardIds)
         .order('player_id')
         .order('card_id')
@@ -157,7 +164,7 @@ export async function getClanTradingData(clanId, cardIds, scope = 'clan', channe
     throw new Error(`读取成员库存失败：${err2.message}`);
   }
 
-  return { players: list, inventory: inventory || [] };
+  return { players: scoped, inventory: inventory || [] };
 }
 /**
  * 一键交换：双方在游戏中交换后，任一方点击按钮即可原子同步双方数据
